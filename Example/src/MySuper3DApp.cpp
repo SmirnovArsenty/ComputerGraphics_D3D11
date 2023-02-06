@@ -162,6 +162,7 @@ int WinMain(HINSTANCE, HINSTANCE, char*, int)
 			char* compileErrors = (char*)(errorVertexCode->GetBufferPointer());
 
 			std::cout << compileErrors << std::endl;
+			OutputDebugStringA(compileErrors);
 		}
 		// If there was  nothing in the error message then it simply could not find the shader file itself.
 		else
@@ -217,29 +218,29 @@ int WinMain(HINSTANCE, HINSTANCE, char*, int)
 		vertexBC->GetBufferSize(),
 		&layout);
 
-	DirectX::XMFLOAT4 points[8] = {
-		DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f),	DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
-		DirectX::XMFLOAT4(-0.5f, -0.5f, 0.5f, 1.0f),	DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f),
-		DirectX::XMFLOAT4(0.5f, -0.5f, 0.5f, 1.0f),	DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f),
-		DirectX::XMFLOAT4(-0.5f, 0.5f, 0.5f, 1.0f),	DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
-	};
+	// DirectX::XMFLOAT4 points[] = {
+	// 	DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f), DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
+	// 	DirectX::XMFLOAT4(-0.5f, -0.5f, 0.5f, 1.0f), DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f),
+	// 	DirectX::XMFLOAT4(0.5f, -0.5f, 0.5f, 1.0f), DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f),
+	// 	DirectX::XMFLOAT4(-0.5f, 0.5f, 0.5f, 1.0f),	DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+	// };
 
 
-	D3D11_BUFFER_DESC vertexBufDesc = {};
-	vertexBufDesc.Usage = D3D11_USAGE_DEFAULT;
-	vertexBufDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	vertexBufDesc.CPUAccessFlags = 0;
-	vertexBufDesc.MiscFlags = 0;
-	vertexBufDesc.StructureByteStride = 0;
-	vertexBufDesc.ByteWidth = sizeof(DirectX::XMFLOAT4) * std::size(points);
+	// D3D11_BUFFER_DESC vertexBufDesc = {};
+	// vertexBufDesc.Usage = D3D11_USAGE_DEFAULT;
+	// vertexBufDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	// vertexBufDesc.CPUAccessFlags = 0;
+	// vertexBufDesc.MiscFlags = 0;
+	// vertexBufDesc.StructureByteStride = 0;
+	// vertexBufDesc.ByteWidth = sizeof(DirectX::XMFLOAT4) * std::size(points);
 
-	D3D11_SUBRESOURCE_DATA vertexData = {};
-	vertexData.pSysMem = points;
-	vertexData.SysMemPitch = 0;
-	vertexData.SysMemSlicePitch = 0;
+	// D3D11_SUBRESOURCE_DATA vertexData = {};
+	// vertexData.pSysMem = points;
+	// vertexData.SysMemPitch = 0;
+	// vertexData.SysMemSlicePitch = 0;
 
-	ID3D11Buffer* vb;
-	device->CreateBuffer(&vertexBufDesc, &vertexData, &vb);
+	// ID3D11Buffer* vb;
+	// device->CreateBuffer(&vertexBufDesc, &vertexData, &vb);
 
 	int indeces[] = { 0,1,2, 1,0,3 };
 	D3D11_BUFFER_DESC indexBufDesc = {};
@@ -311,7 +312,7 @@ int WinMain(HINSTANCE, HINSTANCE, char*, int)
 		context->IASetInputLayout(layout);
 		context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		context->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
-		context->IASetVertexBuffers(0, 1, &vb, strides, offsets);
+		// context->IASetVertexBuffers(0, 1, &vb, strides, offsets);
 		context->VSSetShader(vertexShader, nullptr, 0);
 		context->PSSetShader(pixelShader, nullptr, 0);
 
@@ -346,6 +347,8 @@ int WinMain(HINSTANCE, HINSTANCE, char*, int)
 
 		swapChain->Present(1, /*DXGI_PRESENT_DO_NOT_WAIT*/ 0);
 	}
+
+	return 0;
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
