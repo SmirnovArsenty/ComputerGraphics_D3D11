@@ -3,13 +3,27 @@ cmake_minimum_required(VERSION 3.8)
 project(D3D11_Example)
 
 set(sources 
-    src/MySuper3DApp.cpp
+    src/main.cpp
+    
+    src/core/game_engine.cpp
+    src/core/game_engine.h
+
+    src/render/render.cpp
+    src/render/render.h
+    src/render/shader.cpp
+    src/render/shader.h
+
+    src/win32/win.cpp
+    src/win32/win.h
 )
 
 add_executable(${CMAKE_PROJECT_NAME} WIN32 ${sources})
 
 target_compile_definitions(${CMAKE_PROJECT_NAME}
     PRIVATE -DUNICODE)
+
+target_include_directories(${CMAKE_PROJECT_NAME}
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
