@@ -18,7 +18,7 @@ public:
     {        
         shader_.set_vs_shader(L"./shaders/shader.hlsl", "VSMain",
                               nullptr, nullptr);
-        D3D_SHADER_MACRO pixel_shader_macros[] = { 
+        D3D_SHADER_MACRO pixel_shader_macros[] = {
             "TEST", "1",
             "TCOLOR", "float4(0.0f, 1.0f, 0.0f, 1.0f)",
             nullptr, nullptr
@@ -77,7 +77,7 @@ public:
         indexBufDesc.CPUAccessFlags = 0;
         indexBufDesc.MiscFlags = 0;
         indexBufDesc.StructureByteStride = 0;
-        indexBufDesc.ByteWidth = sizeof(int) * std::size(indices);
+        indexBufDesc.ByteWidth = UINT(sizeof(int) * std::size(indices));
 
         D3D11_SUBRESOURCE_DATA indexData = {};
         indexData.pSysMem = indices;
@@ -88,8 +88,6 @@ public:
     }
     ~GameObject()
     {
-        // index_buffer_ && index_buffer_->Release();
-        // vertex_buffer_ && vertex_buffer_->Release();
     }
 
     void draw()
@@ -140,7 +138,31 @@ HRESULT Render::init()
     swapDesc.SampleDesc.Count = 1;
     swapDesc.SampleDesc.Quality = 0;
 
-    D3D11_CHECK(D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE,
+    // choose best adapter by memory
+    Microsoft::WRL::ComPtr<IDXGIFactory> factory;
+    D3D11_CHECK(CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&factory));
+    int32_t best_adapter_index = 0;
+    int32_t adapter_number = 0;
+    size_t best_memory = 0;
+    while (true) {
+        Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
+        HRESULT enum_result = factory->EnumAdapters(adapter_number, &adapter);
+        if (enum_result != S_OK) {
+            // enumerating finnished
+            break;
+        }
+        DXGI_ADAPTER_DESC adapter_desc;
+        adapter->GetDesc(&adapter_desc);
+        if (best_memory < adapter_desc.DedicatedVideoMemory) {
+            best_adapter_index = adapter_number;
+            best_memory = adapter_desc.DedicatedVideoMemory;
+        }
+        ++adapter_number;
+    }
+    Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
+    factory->EnumAdapters(best_adapter_index, &adapter);
+
+    D3D11_CHECK(D3D11CreateDeviceAndSwapChain(adapter.Get(), D3D_DRIVER_TYPE_UNKNOWN,
                                               nullptr, D3D11_CREATE_DEVICE_DEBUG,
                                               featureLevel, 1, D3D11_SDK_VERSION,
                                               &swapDesc, &swapchain_,
@@ -204,15 +226,6 @@ void Render::destroy()
         delete game_object;
     }
     game_objects_.clear();
-
-    // rasterizer_state_ && rasterizer_state_->Release();
-    // 
-    // render_target_view_ && render_target_view_->Release();
-    // backbuffer_texture_ && backbuffer_texture_->Release();
-    // 
-    // swapchain_ && swapchain_->Release();
-    // context_ && context_->Release();
-    // device_ && device_->Release();
 }
 
 ID3D11Device* Render::device() const

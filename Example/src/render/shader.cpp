@@ -10,12 +10,6 @@ Shader::Shader() {}
 
 Shader::~Shader()
 {
-    // vertex_shader_ && vertex_shader_->Release();
-    // vertex_bc_ && vertex_bc_->Release();
-    // pixel_shader_ && pixel_shader_->Release();
-    // pixel_bc_ && pixel_bc_->Release();
-    // 
-    // input_layout_ && input_layout_->Release();
 }
 
 void Shader::set_vs_shader(const std::wstring& filename,
