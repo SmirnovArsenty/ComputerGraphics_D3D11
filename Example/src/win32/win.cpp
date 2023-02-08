@@ -8,25 +8,56 @@ LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lpa
 {
     switch (message)
     {
+        case WM_GETMINMAXINFO:
+        {   // need to handle it for fullscreen
+            ((MINMAXINFO*)lparam)->ptMaxTrackSize.y =
+                GetSystemMetrics(SM_CYMAXTRACK) +
+                GetSystemMetrics(SM_CYCAPTION) +
+                GetSystemMetrics(SM_CYMENU) +
+                GetSystemMetrics(SM_CYBORDER) * 2;
+            return 0;
+        }
         case WM_KEYUP:
         {
-            // OutputDebugString((L"Key pressed: " + std::to_wstring(wparam) + L"\n").c_str());
+            // OutputDebugString((TEXT("Key pressed: ") + std::to_wstring(wparam) + TEXT("\n")).c_str());
             if (wparam == VK_ESCAPE) {
-                Game::inst()->set_animating(false);
+                Game::inst()->set_destroy();
+            }
+
+            if (wparam == 'F') {
+                RECT fullscreen_rc;
+                HDC hdc = GetDC(HWND_DESKTOP);
+                GetClipBox(hdc, &fullscreen_rc);
+                ReleaseDC(HWND_DESKTOP, hdc);
+                static RECT old_rc = fullscreen_rc;
+
+                RECT current_rc;
+                GetWindowRect(hWnd, &current_rc);
+                SetWindowPos(hWnd, nullptr,
+                             old_rc.left, old_rc.top,
+                             old_rc.right - old_rc.left, old_rc.bottom - old_rc.top,
+                             SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+                old_rc = current_rc;
+
+                Game::inst()->toggle_fullscreen();
             }
             return 0;
         }
         case WM_DESTROY:
         {
+            Game::inst()->set_destroy();
+            return 0;
+        }
+        case WM_ENTERSIZEMOVE:
+        {
             Game::inst()->set_animating(false);
             return 0;
         }
-        case WM_SIZE:
+        case WM_EXITSIZEMOVE:
         {
-            OutputDebugString(std::to_wstring(wparam).c_str());
-            if (wparam == SIZE_RESTORED) {
-                Game::inst()->resize();
-            }
+            // OutputDebugString(std::to_wstring(wparam).c_str());
+            Game::inst()->resize();
+            Game::inst()->set_animating(true);
             return 0;
         }
         default:
@@ -116,8 +147,9 @@ void Win::run()
         total_time -= 1.0f;
 
         WCHAR text[256];
-        swprintf_s(text, TEXT("FPS: %f"), fps);
-        SetWindowText(hWnd_, text);
+        swprintf_s(text, TEXT("FPS: %f\n"), fps);
+        // SetWindowText(hWnd_, text);
+        OutputDebugString(text);
 
         frame_count = 0;
     }

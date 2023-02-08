@@ -16,6 +16,12 @@ Game* Game::inst()
     return &instance;
 }
 
+Game::~Game()
+{
+    win_.release();
+    render_.release();
+}
+
 bool Game::initialize(uint32_t w, uint32_t h)
 {
     win_->initialize(w, h);
@@ -35,8 +41,14 @@ bool Game::initialize(uint32_t w, uint32_t h)
 
 void Game::run()
 {
-    while (animating_)
+    while (!destroy_)
     {
+        // handle win messages
+        win_->run(); // placed here to check `animating_` immediatelly
+        if (!animating_){
+            continue;
+        }
+
         // prepares
         render_->prepare_frame();
         render_->prepare_resources();
@@ -48,10 +60,6 @@ void Game::run()
 
         render_->restore_targets();
         render_->end_frame();
-
-        
-        // handle win messages
-        win_->run(); // placed here to check `animating_` immediatelly
     }
     // next step - destroy
 }
@@ -72,6 +80,11 @@ void Game::destroy()
 void Game::set_animating(bool animating)
 {
     animating_ = animating;
+}
+
+void Game::set_destroy()
+{
+    destroy_ = true;
 }
 
 void Game::resize()

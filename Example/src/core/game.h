@@ -14,6 +14,7 @@ private:
     std::unique_ptr<Win> win_;
     std::unique_ptr<Render> render_;
 
+    bool destroy_{ false };
     bool animating_{ false };
     bool fullscreen_{ false };
 
@@ -24,12 +25,14 @@ private:
     Game(const Game&&) = delete;
 public:
     static Game* inst();
+    ~Game();
 
     virtual bool initialize(uint32_t, uint32_t);
     virtual void run();
     virtual void destroy();
 
     void set_animating(bool);
+    void set_destroy();
     void resize();
     void toggle_fullscreen();
 

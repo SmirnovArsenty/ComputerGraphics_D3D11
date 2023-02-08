@@ -136,7 +136,10 @@ void Render::fullscreen(bool is_fullscreen)
         return;
     }
 
-    swapchain_->SetFullscreenState(is_fullscreen, nullptr);
+    // just a resize for now
+    // swapchain_->SetFullscreenState(is_fullscreen, nullptr);
+
+    resize();
 }
 
 void Render::prepare_frame()
