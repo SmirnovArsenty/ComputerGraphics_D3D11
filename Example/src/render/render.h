@@ -5,8 +5,9 @@
 #include <d3d11.h>
 #include <string>
 #include <vector>
+#include <cstdint>
 
-class GameObject;
+class GameComponent;
 
 class Render
 {
@@ -16,20 +17,36 @@ private:
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_{ nullptr };
     Microsoft::WRL::ComPtr<IDXGISwapChain> swapchain_{ nullptr };
 
+    constexpr static uint32_t swapchain_buffer_count_{ 2 };
+
     // backbuffer[0] texture and render target
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> backbuffer_texture_{ nullptr };
-    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> render_target_view_{ nullptr };
+    ID3D11Texture2D* backbuffer_texture_{ nullptr };
+    ID3D11RenderTargetView* render_target_view_{ nullptr };
 
-    Microsoft::WRL::ComPtr<ID3D11RasterizerState> rasterizer_state_{ nullptr };
+    // depth stencil
+    ID3D11Texture2D* depth_stencil_texture_{ nullptr };
+    ID3D11DepthStencilView* depth_stencil_view_{ nullptr };
+    ID3D11DepthStencilState* depth_stencil_state_{ nullptr };
 
-    std::vector<GameObject*> game_objects_;
+    void create_render_target_view();
+    void destroy_render_target_view();
+    void create_depth_stencil_texture_and_view();
+    void destroy_depth_stencil_texture_and_view();
 
 public:
     Render() = default;
+    ~Render() = default;
 
-    HRESULT init();
-    void run();
-    void destroy();
+    void initialize();
+    void resize();
+    void fullscreen(bool);
+
+    void prepare_frame();
+    void prepare_resources();
+    void restore_targets();
+    void end_frame();
+
+    void destroy_resources();
 
     ID3D11Device* device() const;
     ID3D11DeviceContext* context() const;

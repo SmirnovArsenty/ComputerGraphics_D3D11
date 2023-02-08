@@ -1,36 +1,44 @@
 #include <chrono>
+#include <string>
 #include "win.h"
-#include "core/game_engine.h"
+#include "core/game.h"
 
 // static
 LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lparam)
 {
     switch (message)
     {
-    case WM_KEYDOWN:
-    {
-        // If a key is pressed send it to the input object so it can record that state.
-        // std::cout << "Key: " << static_cast<unsigned int>(wparam) << std::endl;
-
-        if (static_cast<unsigned int>(wparam) == VK_ESCAPE) PostQuitMessage(0);
-        return 0;
-    }
-    case WM_DESTROY:
-    {
-        PostQuitMessage(0);
-        GameEngine::inst()->set_animating(false);
-        return 0;
-    }
-    default:
+        case WM_KEYUP:
+        {
+            // OutputDebugString((L"Key pressed: " + std::to_wstring(wparam) + L"\n").c_str());
+            if (wparam == VK_ESCAPE) {
+                Game::inst()->set_animating(false);
+            }
+            return 0;
+        }
+        case WM_DESTROY:
+        {
+            Game::inst()->set_animating(false);
+            return 0;
+        }
+        case WM_SIZE:
+        {
+            OutputDebugString(std::to_wstring(wparam).c_str());
+            if (wparam == SIZE_RESTORED) {
+                Game::inst()->resize();
+            }
+            return 0;
+        }
+        default:
         {
             return DefWindowProc(hWnd, message, wparam, lparam);
         }
     }
 }
 
-bool Win::init(uint32_t w, uint32_t h)
+bool Win::initialize(uint32_t w, uint32_t h)
 {
-    constexpr wchar_t* app_name = L"Game";
+    constexpr wchar_t* app_name = L"SGame";
 
     HINSTANCE hInst = GetModuleHandle(NULL);
 
@@ -58,7 +66,7 @@ bool Win::init(uint32_t w, uint32_t h)
     RECT windowRect = { 0, 0, static_cast<LONG>(screenWidth), static_cast<LONG>(screenHeight) };
     AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
-    auto dwStyle = WS_SYSMENU | WS_CAPTION | WS_MINIMIZEBOX | WS_THICKFRAME;
+    auto dwStyle = WS_SYSMENU | WS_CAPTION | WS_THICKFRAME; // WS_MINIMIZEBOX
 
     auto posX = (GetSystemMetrics(SM_CXSCREEN) - screenWidth) / 2;
     auto posY = (GetSystemMetrics(SM_CYSCREEN) - screenHeight) / 2;
@@ -83,8 +91,8 @@ void Win::run()
     static std::chrono::time_point<std::chrono::steady_clock> prev_time {
         std::chrono::steady_clock::now()
     };
-	static float total_time = 0;
-	static uint32_t frame_count = 0;
+    static float total_time = 0;
+    static uint32_t frame_count = 0;
 
     MSG msg{};
     while (PeekMessage(&msg, hWnd_, 0, 0, PM_REMOVE))

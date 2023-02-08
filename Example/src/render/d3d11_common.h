@@ -14,3 +14,11 @@
             assert(false);                                                                                          \
         }                                                                                                           \
     } while(0, 0)
+
+#define SAFE_RELEASE(ptr)       \
+    do {                        \
+        if (ptr != nullptr) {   \
+            (ptr)->Release();   \
+        }                       \
+        (ptr = nullptr);        \
+    } while (0, 0)

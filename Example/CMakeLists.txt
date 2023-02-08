@@ -5,13 +5,18 @@ project(D3D11_Example)
 set(sources 
     src/main.cpp
     
-    src/core/game_engine.cpp
-    src/core/game_engine.h
+    src/core/game.cpp
+    src/core/game.h
 
     src/render/render.cpp
     src/render/render.h
     src/render/shader.cpp
     src/render/shader.h
+
+    src/components/game_component.h
+
+    src/components/triangle_component.cpp
+    src/components/triangle_component.h
 
     src/win32/win.cpp
     src/win32/win.h

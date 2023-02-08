@@ -13,7 +13,7 @@ public:
     Win() = default;
     ~Win() = default;
 
-    bool init(uint32_t, uint32_t);
+    bool initialize(uint32_t, uint32_t);
     void run();
     void destroy();
 

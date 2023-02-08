@@ -7,12 +7,12 @@
 class Shader
 {
 private:
-    Microsoft::WRL::ComPtr<ID3D11VertexShader> vertex_shader_;
-    Microsoft::WRL::ComPtr<ID3DBlob> vertex_bc_;
-    Microsoft::WRL::ComPtr<ID3D11PixelShader> pixel_shader_;
-    Microsoft::WRL::ComPtr<ID3DBlob> pixel_bc_;
+    ID3D11VertexShader* vertex_shader_{ nullptr };
+    ID3DBlob* vertex_bc_{ nullptr };
+    ID3D11PixelShader* pixel_shader_{ nullptr };
+    ID3DBlob* pixel_bc_{ nullptr };
 
-    Microsoft::WRL::ComPtr<ID3D11InputLayout> input_layout_;
+    ID3D11InputLayout* input_layout_{ nullptr };
 public:
     Shader();
     ~Shader();

@@ -1,7 +1,7 @@
 #include <sstream>
 #include <d3dcompiler.h>
 
-#include "core/game_engine.h"
+#include "core/game.h"
 #include "render.h"
 #include "shader.h"
 #include "d3d11_common.h"
@@ -10,6 +10,12 @@ Shader::Shader() {}
 
 Shader::~Shader()
 {
+    SAFE_RELEASE(vertex_shader_);
+    SAFE_RELEASE(vertex_bc_);
+    SAFE_RELEASE(pixel_shader_);
+    SAFE_RELEASE(pixel_bc_);
+
+    SAFE_RELEASE(input_layout_);
 }
 
 void Shader::set_vs_shader(const std::wstring& filename,
@@ -36,7 +42,7 @@ void Shader::set_vs_shader(const std::wstring& filename,
         }
         assert(false);
     }
-    auto device = GameEngine::inst()->render().device();
+    auto device = Game::inst()->render().device();
     D3D11_CHECK(device->CreateVertexShader(vertex_bc_->GetBufferPointer(),
                                            vertex_bc_->GetBufferSize(),
                                            nullptr, &vertex_shader_));
@@ -66,7 +72,7 @@ void Shader::set_ps_shader(const std::wstring& filename,
         }
         assert(false);
     }
-    auto device = GameEngine::inst()->render().device();
+    auto device = Game::inst()->render().device();
     D3D11_CHECK(device->CreatePixelShader(pixel_bc_->GetBufferPointer(),
                                           pixel_bc_->GetBufferSize(),
                                           nullptr, &pixel_shader_));
@@ -74,7 +80,7 @@ void Shader::set_ps_shader(const std::wstring& filename,
 
 void Shader::set_input_layout(D3D11_INPUT_ELEMENT_DESC* inputs, uint32_t count)
 {
-    auto device = GameEngine::inst()->render().device();
+    auto device = Game::inst()->render().device();
     D3D11_CHECK(device->CreateInputLayout(
                 inputs, count,
                 vertex_bc_->GetBufferPointer(),
@@ -84,8 +90,8 @@ void Shader::set_input_layout(D3D11_INPUT_ELEMENT_DESC* inputs, uint32_t count)
 
 void Shader::use()
 {
-    auto context = GameEngine::inst()->render().context();
-    context->IASetInputLayout(input_layout_.Get());
-    context->VSSetShader(vertex_shader_.Get(), nullptr, 0);
-    context->PSSetShader(pixel_shader_.Get(), nullptr, 0);
+    auto context = Game::inst()->render().context();
+    context->IASetInputLayout(input_layout_);
+    context->VSSetShader(vertex_shader_, nullptr, 0);
+    context->PSSetShader(pixel_shader_, nullptr, 0);
 }
