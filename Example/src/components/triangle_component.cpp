@@ -1,25 +1,24 @@
 #include <directxmath.h>
 
-#include "triangle_component.h"
 #include "render/render.h"
 #include "core/game.h"
-
 #include "render/d3d11_common.h"
+#include "components/game_component_decl.h"
 
 TriangleComponent::TriangleComponent() {}
 TriangleComponent::~TriangleComponent() {}
 
 void TriangleComponent::initialize()
 {
-    shader_.set_vs_shader(L"./shaders/shader.hlsl", "VSMain",
-                            nullptr, nullptr);
-    D3D_SHADER_MACRO pixel_shader_macros[] = {
-        "TEST", "1",
-        "TCOLOR", "float4(0.0f, 1.0f, 0.0f, 1.0f)",
-        nullptr, nullptr
-    };
-    shader_.set_ps_shader(L"./shaders/shader.hlsl", "PSMain",
-                            pixel_shader_macros, nullptr);
+    shader_.set_vs_shader((std::wstring(resource_path_) + L"shaders/shader.hlsl").c_str(),
+                          "VSMain", nullptr, nullptr);
+    // D3D_SHADER_MACRO pixel_shader_macros[] = {
+    //     "TEST", "1",
+    //     "TCOLOR", "float4(0.0f, 1.0f, 0.0f, 1.0f)",
+    //     nullptr, nullptr
+    // };
+    shader_.set_ps_shader((std::wstring(resource_path_) + L"shaders/shader.hlsl").c_str(),
+                          "PSMain", nullptr /* pixel_shader_macros */, nullptr);
 
     D3D11_INPUT_ELEMENT_DESC inputs[] = {
         D3D11_INPUT_ELEMENT_DESC {
@@ -43,11 +42,10 @@ void TriangleComponent::initialize()
 
     // create buffers
     auto device = Game::inst()->render().device();
-    DirectX::XMFLOAT4 points[] = {
+    DirectX::XMFLOAT4 points[] = { // full-screen triangle
         DirectX::XMFLOAT4(3.f, -1.f, 0.f, 1.0f), DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),
         DirectX::XMFLOAT4(-1.f, 3.f, 0.f, 1.0f), DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f),
         DirectX::XMFLOAT4(-1.f, -1.f, 0.f, 1.0f), DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f),
-        // DirectX::XMFLOAT4(-0.5f, 0.5f, 0.f, 1.0f), DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
     };
 
     D3D11_BUFFER_DESC vertexBufDesc = {};
@@ -65,7 +63,7 @@ void TriangleComponent::initialize()
 
     D3D11_CHECK(device->CreateBuffer(&vertexBufDesc, &vertexData, &vertex_buffer_));
 
-    int indices[] = { 0,1,2 }; //, 1,0,3 };
+    int indices[] = { 0,1,2 };
     D3D11_BUFFER_DESC indexBufDesc = {};
     indexBufDesc.Usage = D3D11_USAGE_DEFAULT;
     indexBufDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;

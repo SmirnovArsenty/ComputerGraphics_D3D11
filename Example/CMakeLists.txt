@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 3.8)
 
 project(D3D11_Example)
 
+### dependencies
+
+# tinygltf
+add_library(tinygltf INTERFACE)
+set(TINYGLTF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tinygltf)
+target_sources(tinygltf INTERFACE ${TINYGLTF_DIR}/tiny_gltf.h ${TINYGLTF_DIR}/json.hpp)
+target_include_directories(tinygltf INTERFACE ${TINYGLTF_DIR})
+
+### end of dependencies
+
 set(sources 
     src/main.cpp
     
@@ -14,9 +24,9 @@ set(sources
     src/render/shader.h
 
     src/components/game_component.h
+    src/components/game_component_decl.h
 
     src/components/triangle_component.cpp
-    src/components/triangle_component.h
 
     src/win32/win.cpp
     src/win32/win.h
@@ -26,6 +36,10 @@ add_executable(${CMAKE_PROJECT_NAME} WIN32 ${sources})
 
 target_compile_definitions(${CMAKE_PROJECT_NAME}
     PRIVATE -DUNICODE)
+
+target_link_libraries(${CMAKE_PROJECT_NAME}
+    tinygltf
+)
 
 target_include_directories(${CMAKE_PROJECT_NAME}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
