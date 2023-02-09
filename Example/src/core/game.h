@@ -27,6 +27,8 @@ public:
     static Game* inst();
     ~Game();
 
+    virtual void add_component(GameComponent*);
+
     virtual bool initialize(uint32_t, uint32_t);
     virtual void run();
     virtual void destroy();

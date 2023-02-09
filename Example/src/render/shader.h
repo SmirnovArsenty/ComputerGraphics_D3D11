@@ -17,10 +17,10 @@ public:
     Shader();
     ~Shader();
 
-    void set_vs_shader(const std::wstring& filename,
+    void set_vs_shader(const std::string& filename,
                        const std::string& vs_entrypoint,
                        D3D_SHADER_MACRO*, ID3DInclude*);
-    void set_ps_shader(const std::wstring& filename,
+    void set_ps_shader(const std::string& filename,
                        const std::string& ps_entrypoint,
                        D3D_SHADER_MACRO*, ID3DInclude*);
 

@@ -2,11 +2,12 @@
 #include <string>
 
 #include "game_component.h"
+#include "render/shader.h"
 
 class TriangleComponent : public GameComponent
 {
 private:
-    constexpr static wchar_t* resource_path_{ L"./resources/triangle_component/" };
+    constexpr static char* resource_path_{ "./resources/triangle_component/" };
 
     Shader shader_;
 
@@ -26,13 +27,32 @@ public:
     void destroy_resources() override;
 };
 
-class GLTFModelComponent : GameComponent
+class GLTFModelComponent : public GameComponent
 {
 private:
-    constexpr static wchar_t* resource_path_{ L"./resources/gltfmodel_component/" };
+    constexpr static char* resource_path_{ "./resources/gltfmodel_component/" };
 
     // path is relative to resource_path_
-    std::wstring gltf_filename_;
+    std::string gltf_filename_;
+
+    // The vertex layout for the samples' model
+    /*struct Vertex {
+        glm::vec3 pos;
+        glm::vec3 normal;
+        glm::vec2 uv;
+        glm::vec3 color;
+    };
+
+    // Single vertex buffer for all primitives
+    struct {
+        ID3D11Buffer* buffer;
+    } vertices;
+
+    // Single index buffer for all primitives
+    struct {
+        int count;
+        ID3D11Buffer* buffer;
+    } indices;*/
 
     Shader shader_;
 

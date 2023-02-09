@@ -18,13 +18,17 @@ Shader::~Shader()
     SAFE_RELEASE(input_layout_);
 }
 
-void Shader::set_vs_shader(const std::wstring& filename,
+void Shader::set_vs_shader(const std::string& filename,
                            const std::string& entrypoint,
                            D3D_SHADER_MACRO* macro, ID3DInclude* include)
 {
+    // translate filename to wstring
+    std::wstringstream wfilename;
+    wfilename << filename.c_str();
+
     ID3DBlob* error_code = nullptr;
     // don't use D3D11_CHECK for this call, need to know compilation error message
-    HRESULT status = D3DCompileFromFile(filename.c_str(), macro, include,
+    HRESULT status = D3DCompileFromFile(wfilename.str().c_str(), macro, include,
                                         entrypoint.c_str(), "vs_5_0",
                                         D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
                                         0, &vertex_bc_, &error_code);
@@ -32,13 +36,13 @@ void Shader::set_vs_shader(const std::wstring& filename,
     {
         if (error_code)
         {
-            std::wstringstream err;
+            std::stringstream err;
             err << (char*)(error_code->GetBufferPointer());
             OutputDebugString(err.str().c_str());
         }
         else
         {
-            OutputDebugString(L"Missing shader file");
+            OutputDebugString("Missing shader file");
         }
         assert(false);
     }
@@ -48,13 +52,17 @@ void Shader::set_vs_shader(const std::wstring& filename,
                                            nullptr, &vertex_shader_));
 }
 
-void Shader::set_ps_shader(const std::wstring& filename,
+void Shader::set_ps_shader(const std::string& filename,
                            const std::string& entrypoint,
                            D3D_SHADER_MACRO* macro, ID3DInclude* include)
 {
+    // translate filename to wstring
+    std::wstringstream wfilename;
+    wfilename << filename.c_str();
+
     ID3DBlob* error_code = nullptr;
     // don't use D3D11_CHECK for this call, need to know compilation error message
-    HRESULT status = D3DCompileFromFile(filename.c_str(), macro, include,
+    HRESULT status = D3DCompileFromFile(wfilename.str().c_str(), macro, include,
                                         entrypoint.c_str(), "ps_5_0",
                                         D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
                                         0, &pixel_bc_, &error_code);
@@ -62,13 +70,13 @@ void Shader::set_ps_shader(const std::wstring& filename,
     {
         if (error_code)
         {
-            std::wstringstream err;
+            std::stringstream err;
             err << (char*)(error_code->GetBufferPointer());
             OutputDebugString(err.str().c_str());
         }
         else
         {
-            OutputDebugString(L"Missing shader file");
+            OutputDebugString("Missing shader file");
         }
         assert(false);
     }

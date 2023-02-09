@@ -13,7 +13,7 @@ void Render::initialize()
     HWND hWnd = engine->win().get_window();
     if (hWnd == NULL)
     {
-        OutputDebugString(L"Window is not initialized!");
+        OutputDebugString("Window is not initialized!");
         assert(false);
         return;
     }

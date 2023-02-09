@@ -1,7 +1,7 @@
 #include "game.h"
 #include "win32/win.h"
 #include "render/render.h"
-#include "components/triangle_component.h"
+#include "components/game_component.h"
 
 Game::Game()
 {
@@ -22,13 +22,15 @@ Game::~Game()
     render_.release();
 }
 
+void Game::add_component(GameComponent* game_component)
+{
+    game_components_.emplace(game_component);
+}
+
 bool Game::initialize(uint32_t w, uint32_t h)
 {
     win_->initialize(w, h);
     render_->initialize();
-
-    // add some game components
-    game_components_.emplace(new TriangleComponent());
 
     for (auto game_component : game_components_)
     {

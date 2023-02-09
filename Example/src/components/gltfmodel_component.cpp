@@ -2,6 +2,7 @@
 #include <vector>
 #include <fstream>
 
+#define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #define TINYGLTF_NO_EXTERNAL_IMAGE
@@ -27,36 +28,34 @@ bool TINYGLTF_FileExistsFunction(const std::string& abs_filename, void* user_dat
 { // just stub
     return true;
 }
-TINYGLTF_ExpandFilePathFunction(const std::string& file_path, void* user_data)
+std::string TINYGLTF_ExpandFilePathFunction(const std::string& file_path, void* user_data)
 {
     return file_path;
 }
-std::string TINYGLTF_ReadWholeFileFunction(std::vector<unsigned char>* data, std::string* fileerr, const std::string& file_name, void* user_data)
+bool TINYGLTF_ReadWholeFileFunction(std::vector<unsigned char>* data, std::string* fileerr, const std::string& file_name, void* user_data)
 {
     std::vector<uint8_t> data_;
 
-	std::ifstream file;
+    std::ifstream file;
 
-	file.open(file_name, std::ios::in | std::ios::binary);
+    file.open(file_name, std::ios::in | std::ios::binary);
 
-	if (!file.is_open())
-	{
-		throw std::runtime_error("read_binary_file: Failed to open file: " + file_name);
-	}
+    if (!file.is_open())
+    {
+        throw std::runtime_error("read_binary_file: Failed to open file: " + file_name);
+        return false;
+    }
 
-	uint64_t read_count = count;
-	if (count == 0)
-	{
-		file.seekg(0, std::ios::end);
-		read_count = static_cast<uint64_t>(file.tellg());
-		file.seekg(0, std::ios::beg);
-	}
+    file.seekg(0, std::ios::end);
+    uint64_t read_count = static_cast<uint64_t>(file.tellg());
+    file.seekg(0, std::ios::beg);
 
-	data_.resize(static_cast<size_t>(read_count));
-	file.read(reinterpret_cast<char *>(data_.data()), read_count);
-	file.close();
+    data_.resize(static_cast<size_t>(read_count));
+    file.read(reinterpret_cast<char *>(data_.data()), read_count);
+    file.close();
     
     *data = data_;
+    return true;
 }
 bool TINYGLTF_WriteWholeFileFunction(std::string*, const std::string&, const std::vector<unsigned char>&, void*)
 {
@@ -80,6 +79,29 @@ void GLTFModelComponent::initialize()
 
     tinygltf::Model import_model;
     std::string err, warn;
-    bool status = gltf_loader.LoadASCIIFromFile(&import_model, &err, &warn, );
+    bool status = gltf_loader.LoadASCIIFromFile(&import_model, &err, &warn, resource_path_ + gltf_filename_, 0u);
 
+    for (auto& mesh : import_model.meshes)
+    {
+        for (auto& primitive : mesh.primitives)
+        {
+            primitive;
+        }
+    }
+}
+
+void GLTFModelComponent::draw()
+{
+}
+
+void GLTFModelComponent::reload()
+{
+}
+
+void GLTFModelComponent::update()
+{
+}
+
+void GLTFModelComponent::destroy_resources()
+{
 }

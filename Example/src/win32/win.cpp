@@ -2,6 +2,7 @@
 #include <string>
 #include "win.h"
 #include "core/game.h"
+#include "components/game_component_decl.h"
 
 // static
 LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lparam)
@@ -19,7 +20,7 @@ LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lpa
         }
         case WM_KEYUP:
         {
-            // OutputDebugString((TEXT("Key pressed: ") + std::to_wstring(wparam) + TEXT("\n")).c_str());
+            // OutputDebugString((TEXT("Key pressed: ") + std::to_string(wparam) + TEXT("\n")).c_str());
             if (wparam == VK_ESCAPE) {
                 Game::inst()->set_destroy();
             }
@@ -55,7 +56,7 @@ LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lpa
         }
         case WM_EXITSIZEMOVE:
         {
-            // OutputDebugString(std::to_wstring(wparam).c_str());
+            // OutputDebugString(std::to_string(wparam).c_str());
             Game::inst()->resize();
             Game::inst()->set_animating(true);
             return 0;
@@ -69,7 +70,7 @@ LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lpa
 
 bool Win::initialize(uint32_t w, uint32_t h)
 {
-    constexpr wchar_t* app_name = L"SGame";
+    constexpr char* app_name = "SGame";
 
     HINSTANCE hInst = GetModuleHandle(NULL);
 
@@ -146,8 +147,8 @@ void Win::run()
 
         total_time -= 1.0f;
 
-        WCHAR text[256];
-        swprintf_s(text, TEXT("FPS: %f\n"), fps);
+        char text[256];
+        sprintf_s(text, TEXT("FPS: %f\n"), fps);
         // SetWindowText(hWnd_, text);
         OutputDebugString(text);
 

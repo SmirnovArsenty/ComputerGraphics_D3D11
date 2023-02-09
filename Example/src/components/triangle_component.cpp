@@ -10,14 +10,14 @@ TriangleComponent::~TriangleComponent() {}
 
 void TriangleComponent::initialize()
 {
-    shader_.set_vs_shader((std::wstring(resource_path_) + L"shaders/shader.hlsl").c_str(),
+    shader_.set_vs_shader((std::string(resource_path_) + "shaders/shader.hls").c_str(),
                           "VSMain", nullptr, nullptr);
     // D3D_SHADER_MACRO pixel_shader_macros[] = {
     //     "TEST", "1",
     //     "TCOLOR", "float4(0.0f, 1.0f, 0.0f, 1.0f)",
     //     nullptr, nullptr
     // };
-    shader_.set_ps_shader((std::wstring(resource_path_) + L"shaders/shader.hlsl").c_str(),
+    shader_.set_ps_shader((std::string(resource_path_) + "shaders/shader.hls").c_str(),
                           "PSMain", nullptr /* pixel_shader_macros */, nullptr);
 
     D3D11_INPUT_ELEMENT_DESC inputs[] = {

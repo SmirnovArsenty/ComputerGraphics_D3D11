@@ -1,7 +1,5 @@
 #pragma once
 
-#include "render/shader.h"
-
 class GameComponent
 {
 public:

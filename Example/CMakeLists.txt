@@ -27,15 +27,13 @@ set(sources
     src/components/game_component_decl.h
 
     src/components/triangle_component.cpp
+    src/components/gltfmodel_component.cpp
 
     src/win32/win.cpp
     src/win32/win.h
 )
 
 add_executable(${CMAKE_PROJECT_NAME} WIN32 ${sources})
-
-target_compile_definitions(${CMAKE_PROJECT_NAME}
-    PRIVATE -DUNICODE)
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
     tinygltf
