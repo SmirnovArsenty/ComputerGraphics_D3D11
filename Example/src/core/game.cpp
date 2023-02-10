@@ -71,7 +71,6 @@ void Game::destroy()
     for (auto game_component : game_components_)
     {
         game_component->destroy_resources();
-        delete game_component;
     }
     game_components_.clear();
 
@@ -98,6 +97,11 @@ void Game::toggle_fullscreen()
 {
     fullscreen_ = !fullscreen_;
     render_->fullscreen(fullscreen_);
+}
+
+void Game::mouse_drag(float delta_x, float delta_y)
+{
+    render_->camera_update(delta_x, delta_y);
 }
 
 const Win& Game::win() const

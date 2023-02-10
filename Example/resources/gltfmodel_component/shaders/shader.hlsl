@@ -1,14 +1,20 @@
 struct VS_IN
 {
-    float4 pos : POSITION0;
-    float4 col : COLOR0;
-    // uint id : SV_VertexID;
+    float3 pos : POSITION0;
+    float3 normal : NORMAL0;
+    float2 uv : TEXCOORD0;
+    float3 col : COLOR0;
 };
 
 struct PS_IN
 {
     float4 pos : SV_POSITION;
     float4 col : COLOR;
+};
+
+cbuffer UniformData : register(b0)
+{
+    matrix VP;
 };
 
 PS_IN VSMain( VS_IN input )
@@ -32,9 +38,9 @@ PS_IN VSMain( VS_IN input )
     //     output.col = float4(1.0f, 1.0f, 1.0f, 1.0f);
     // }
 
-    output.pos = input.pos;
-    output.col = input.col;
-    
+    output.pos = mul(float4(input.pos, 1.f), VP);
+    output.col = float4(input.normal, 1.f);
+
     return output;
 }
 

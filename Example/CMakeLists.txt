@@ -10,6 +10,12 @@ set(TINYGLTF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tinygltf)
 target_sources(tinygltf INTERFACE ${TINYGLTF_DIR}/tiny_gltf.h ${TINYGLTF_DIR}/json.hpp)
 target_include_directories(tinygltf INTERFACE ${TINYGLTF_DIR})
 
+# glm
+add_library(glm INTERFACE)
+set(GLM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/glm)
+target_sources(glm INTERFACE ${GLM_DIR}/glm/glm.hpp)
+target_include_directories(glm INTERFACE ${GLM_DIR})
+
 ### end of dependencies
 
 set(sources 
@@ -20,8 +26,13 @@ set(sources
 
     src/render/render.cpp
     src/render/render.h
+    
+    src/render/buffer.cpp
+    src/render/buffer.h
     src/render/shader.cpp
     src/render/shader.h
+    src/render/camera.cpp
+    src/render/camera.h
 
     src/components/game_component.h
     src/components/game_component_decl.h
@@ -37,6 +48,7 @@ add_executable(${CMAKE_PROJECT_NAME} WIN32 ${sources})
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
     tinygltf
+    glm
 )
 
 target_include_directories(${CMAKE_PROJECT_NAME}

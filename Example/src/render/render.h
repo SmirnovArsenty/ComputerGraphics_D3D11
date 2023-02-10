@@ -6,8 +6,11 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <glm/glm.hpp>
+#include <directxmath.h>
 
 class GameComponent;
+class Camera;
 
 class Render
 {
@@ -33,6 +36,8 @@ private:
     void create_depth_stencil_texture_and_view();
     void destroy_depth_stencil_texture_and_view();
 
+    Camera* camera_{ nullptr };
+
 public:
     Render() = default;
     ~Render() = default;
@@ -50,4 +55,9 @@ public:
 
     ID3D11Device* device() const;
     ID3D11DeviceContext* context() const;
+
+    // handle camera
+    void camera_update(float delta_x, float delta_y);
+
+    DirectX::XMMATRIX camera_vp() const;
 };

@@ -38,6 +38,8 @@ public:
     void resize();
     void toggle_fullscreen();
 
+    void mouse_drag(float delta_x, float delta_y);
+
     const Win& win() const;
     const Render& render() const;
 };

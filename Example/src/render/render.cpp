@@ -5,6 +5,7 @@
 #include "win32/win.h"
 #include "d3d11_common.h"
 #include "shader.h"
+#include "camera.h"
 
 void Render::initialize()
 {
@@ -82,7 +83,7 @@ void Render::initialize()
     D3D11_DEPTH_STENCIL_DESC depth_stencil_desc = {};
     depth_stencil_desc.DepthEnable = true;
     depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    depth_stencil_desc.DepthFunc = D3D11_COMPARISON_GREATER_EQUAL; // reversed depth
+    depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS;
     depth_stencil_desc.StencilEnable = false;
     depth_stencil_desc.StencilReadMask = 0;
     depth_stencil_desc.StencilWriteMask = 0;
@@ -99,6 +100,9 @@ void Render::initialize()
     D3D11_CHECK(device_->CreateDepthStencilState(&depth_stencil_desc, &depth_stencil_state_));
 
     create_depth_stencil_texture_and_view();
+
+    camera_ = new Camera();
+    // camera_->set_camera(glm::vec3(100.f), glm::vec3(0.f));
 }
 
 void Render::resize()
@@ -157,6 +161,8 @@ void Render::prepare_frame()
     viewport.MaxDepth = 1.0f;
 
     context_->RSSetViewports(1, &viewport);
+
+    camera_->update();
 }
 
 void Render::prepare_resources()
@@ -186,6 +192,8 @@ void Render::destroy_resources()
     destroy_depth_stencil_texture_and_view();
 
     destroy_render_target_view();
+
+    delete camera_;
 }
 
 ID3D11Device* Render::device() const
@@ -196,6 +204,11 @@ ID3D11Device* Render::device() const
 ID3D11DeviceContext* Render::context() const
 {
     return context_.Get();
+}
+
+DirectX::XMMATRIX Render::camera_vp() const
+{
+    return camera_->VP();
 }
 
 void Render::create_render_target_view()
@@ -242,4 +255,10 @@ void Render::destroy_depth_stencil_texture_and_view()
 {
     SAFE_RELEASE(depth_stencil_texture_);
     SAFE_RELEASE(depth_stencil_view_);
+}
+
+void Render::camera_update(float delta_x, float delta_y)
+{
+    camera_->pitch(delta_y);
+    camera_->yaw(delta_x);
 }
