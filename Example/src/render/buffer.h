@@ -2,6 +2,7 @@
 
 #include <d3d11.h>
 #include <vector>
+#include <string>
 
 class Buffer
 {
@@ -19,6 +20,7 @@ public:
     ~Buffer();
 
     void initialize(D3D11_BIND_FLAG bind_flags, void* data, UINT stride, UINT count, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
+    void set_name(const std::string& name);
     void bind(UINT slot = 0);
     void destroy();
 

@@ -123,14 +123,16 @@ private:
     ID3D11RasterizerState* rasterizer_state_{ nullptr };
 
     struct UniformData {
-        DirectX::XMMATRIX vp;
+        glm::mat4 mvp;
     };
 
     ID3D11Buffer* uniform_buffer_;
 
+    glm::mat4 model_transform_;
+
     void load_node(tinygltf::Model* model, tinygltf::Node* input_node, GLTFModelComponent::Node* parent);
 public:
-    GLTFModelComponent(const std::string& filename);
+    GLTFModelComponent(const std::string& filename, glm::vec3 position = glm::vec3(0.f), glm::vec3 rotation = glm::vec3(0.f), glm::vec3 scale = glm::vec3(1.f));
     ~GLTFModelComponent();
 
     void initialize() override;

@@ -6,7 +6,7 @@
 class Camera
 {
 private:
-    glm::vec3 position_{ -1.f, 0.f, 0.f };
+    glm::vec3 position_{ -1000.f, 0.f, 0.f };
     glm::vec3 target_{ 0.f, 0.f, 0.f };
 
 public:
@@ -22,7 +22,7 @@ public:
     void pitch(float delta); // around right vector
     void yaw(float delta); // around up vector
 
-    DirectX::XMMATRIX VP() const;
+    glm::mat4 VP() const;
 
     void update();
 };

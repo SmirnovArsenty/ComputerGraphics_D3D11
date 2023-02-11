@@ -40,6 +40,11 @@ void Buffer::initialize(D3D11_BIND_FLAG bind_flags, void* data, UINT stride, UIN
     D3D11_CHECK(device->CreateBuffer(&buffer_desc_, &subresource_data_, &resource_));
 }
 
+void Buffer::set_name(const std::string& name)
+{
+    resource_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(name.size()), name.c_str());
+}
+
 void Buffer::bind(UINT slot)
 {
     auto context = Game::inst()->render().context();

@@ -1,6 +1,7 @@
 #include "game.h"
 #include "win32/win.h"
 #include "render/render.h"
+#include "render/annotation.h"
 #include "components/game_component.h"
 
 Game::Game()
@@ -51,17 +52,28 @@ void Game::run()
             continue;
         }
 
-        // prepares
-        render_->prepare_frame();
-        render_->prepare_resources();
-
-        for (auto game_component : game_components_)
         {
-            game_component->draw();
-        }
+            // prepares
+            {
+                Annotation annotation("prepare resources");
+                render_->prepare_frame();
+                render_->prepare_resources();
+            }
 
-        render_->restore_targets();
-        render_->end_frame();
+            {
+                Annotation annotation("draw components");
+                for (auto game_component : game_components_)
+                {
+                    game_component->draw();
+                }
+            }
+
+            {
+                Annotation annotation("after draw");
+                render_->restore_targets();
+                render_->end_frame();
+            }
+        }
     }
     // next step - destroy
 }

@@ -27,6 +27,10 @@ set(sources
     src/render/render.cpp
     src/render/render.h
     
+    # debug groups
+    src/render/annotation.cpp
+    src/render/annotation.h
+
     src/render/buffer.cpp
     src/render/buffer.h
     src/render/shader.cpp

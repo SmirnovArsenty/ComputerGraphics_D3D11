@@ -17,6 +17,8 @@ public:
     Shader();
     ~Shader();
 
+    void set_name(const std::string& name);
+
     void set_vs_shader(const std::string& filename,
                        const std::string& vs_entrypoint,
                        D3D_SHADER_MACRO*, ID3DInclude*);

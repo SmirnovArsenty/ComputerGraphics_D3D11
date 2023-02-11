@@ -10,45 +10,44 @@ struct PS_IN
 {
     float4 pos : SV_POSITION;
     float4 col : COLOR;
+    float3 normal : NORMAL;
+    float2 uv : TEXCOORD;
+};
+
+struct PS_OUT
+{
+    float4 color : SV_Target;
+    float depth : SV_Depth;
 };
 
 cbuffer UniformData : register(b0)
 {
-    matrix VP;
+    float4x4 mvp;
 };
 
 PS_IN VSMain( VS_IN input )
 {
     PS_IN output = (PS_IN)0;
 
-    // if (input.id == 0) {
-    //     output.pos = float4(0.5f, 0.5f, 0.5f, 1.0f);
-    //     output.col = float4(1.0f, 0.0f, 0.0f, 1.0f);
-    // }
-    // if (input.id == 1) {
-    //     output.pos = float4(-0.5f, -0.5f, 0.5f, 1.0f);
-    //     output.col = float4(0.0f, 0.0f, 1.0f, 1.0f);
-    // }
-    // if (input.id == 2) {
-    //     output.pos = float4(0.5f, -0.5f, 0.5f, 1.0f);
-    //     output.col = float4(0.0f, 1.0f, 0.0f, 1.0f);
-    // }
-    // if (input.id == 3) {
-    //     output.pos = float4(-0.5f, 0.5f, 0.5f, 1.0f);
-    //     output.col = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    // }
-
-    output.pos = mul(float4(input.pos, 1.f), VP);
+    output.pos = mul(float4(input.pos, 0.f), mvp);
     output.col = float4(input.normal, 1.f);
+    output.normal = input.normal;
+    output.uv = input.uv;
 
     return output;
 }
 
-float4 PSMain( PS_IN input ) : SV_Target
+PS_OUT PSMain( PS_IN input ) : SV_Target
 {
-    float4 col = input.col;
-// #ifdef TEST
-//     if (input.pos.x > 400) col = TCOLOR;
-// #endif
-    return col;
+    float3 light_pos = float3(0.f, 10000.f, 0.f);
+    float light_dot = dot(input.normal, normalize(light_pos - input.pos.xyz));
+    float4 col = float4(float3(light_dot, light_dot, light_dot), 1.f);
+    
+    float depth = input.pos.w;
+
+    PS_OUT res = (PS_OUT)0;
+    res.color = col;
+    res.depth = depth;
+
+    return res;
 }

@@ -14,30 +14,38 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "render/render.h"
+#include "render/annotation.h"
 #include "core/game.h"
 #include "render/d3d11_common.h"
 #include "components/game_component_decl.h"
 
-GLTFModelComponent::GLTFModelComponent(const std::string& filename) : gltf_filename_{ filename }
+GLTFModelComponent::GLTFModelComponent(const std::string& filename, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale) : gltf_filename_{ filename }
 {
     // must not be found
     assert(gltf_filename_.find(resource_path_) == std::string::npos);
+
+    // initalize model transform matrix
+    (void)scale; // unused
+    model_transform_ = glm::identity<glm::mat4>();
+    model_transform_ = glm::translate(model_transform_, position) * glm::scale(model_transform_, scale);
 }
 
 GLTFModelComponent::~GLTFModelComponent()
 {
 }
 
-// gltf loader callbacks
-bool TINYGLTF_FileExistsFunction(const std::string& abs_filename, void* user_data)
+namespace {
+namespace gltf_loader_callbacks
+{
+static bool TINYGLTF_FileExistsFunction(const std::string& abs_filename, void* user_data)
 { // just stub
     return true;
 }
-std::string TINYGLTF_ExpandFilePathFunction(const std::string& file_path, void* user_data)
+static std::string TINYGLTF_ExpandFilePathFunction(const std::string& file_path, void* user_data)
 {
     return file_path;
 }
-bool TINYGLTF_ReadWholeFileFunction(std::vector<unsigned char>* data, std::string* fileerr, const std::string& file_name, void* user_data)
+static bool TINYGLTF_ReadWholeFileFunction(std::vector<unsigned char>* data, std::string* fileerr, const std::string& file_name, void* user_data)
 {
     std::vector<uint8_t> data_;
 
@@ -62,11 +70,13 @@ bool TINYGLTF_ReadWholeFileFunction(std::vector<unsigned char>* data, std::strin
     *data = data_;
     return true;
 }
-bool TINYGLTF_WriteWholeFileFunction(std::string*, const std::string&, const std::vector<unsigned char>&, void*)
+static bool TINYGLTF_WriteWholeFileFunction(std::string*, const std::string&, const std::vector<unsigned char>&, void*)
 {
     // do not write any gltf
     assert(false);
     return true;
+}
+}
 }
 
 void GLTFModelComponent::load_node(tinygltf::Model* model, tinygltf::Node* input_node, GLTFModelComponent::Node* parent)
@@ -209,10 +219,10 @@ void GLTFModelComponent::initialize()
     // load model from gltf_filename_
     tinygltf::TinyGLTF gltf_loader;
     tinygltf::FsCallbacks gltf_fs_callbacks = {
-        TINYGLTF_FileExistsFunction,
-        TINYGLTF_ExpandFilePathFunction,
-        TINYGLTF_ReadWholeFileFunction,
-        TINYGLTF_WriteWholeFileFunction,
+        gltf_loader_callbacks::TINYGLTF_FileExistsFunction,
+        gltf_loader_callbacks::TINYGLTF_ExpandFilePathFunction,
+        gltf_loader_callbacks::TINYGLTF_ReadWholeFileFunction,
+        gltf_loader_callbacks::TINYGLTF_WriteWholeFileFunction,
         nullptr
     };
     gltf_loader.SetFsCallbacks(gltf_fs_callbacks);
@@ -228,6 +238,8 @@ void GLTFModelComponent::initialize()
 
     vertices_.buffer.initialize(D3D11_BIND_VERTEX_BUFFER, vertices_.vertex_buffer_raw.data(), sizeof(vertices_.vertex_buffer_raw[0]), static_cast<UINT>(vertices_.vertex_buffer_raw.size()));
     indices_.buffer.initialize(D3D11_BIND_INDEX_BUFFER, indices_.index_buffer_raw.data(), sizeof(indices_.index_buffer_raw[0]), static_cast<UINT>(indices_.index_buffer_raw.size()));
+    vertices_.buffer.set_name("gltf_vertex_buffer");
+    indices_.buffer.set_name("gltf_index_buffer");
 
     shader_.set_vs_shader((std::string(resource_path_) + "shaders/shader.hlsl").c_str(),
                           "VSMain", nullptr, nullptr);
@@ -267,6 +279,8 @@ void GLTFModelComponent::initialize()
 
     shader_.set_input_layout(inputs, static_cast<uint32_t>(std::size(inputs)));
 
+    shader_.set_name("gltf_shader");
+
     CD3D11_RASTERIZER_DESC rastDesc = {};
     rastDesc.CullMode = D3D11_CULL_NONE;
     rastDesc.FillMode = D3D11_FILL_SOLID; // D3D11_FILL_WIREFRAME;
@@ -277,17 +291,20 @@ void GLTFModelComponent::initialize()
     D3D11_BUFFER_DESC uniform_buffer_desc;
 
     uniform_buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    uniform_buffer_desc.ByteWidth = 80;
+    uniform_buffer_desc.ByteWidth = sizeof(UniformData);
     uniform_buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     uniform_buffer_desc.MiscFlags = 0;
     uniform_buffer_desc.StructureByteStride = 0;
     uniform_buffer_desc.Usage = D3D11_USAGE_DYNAMIC;
 
     device->CreateBuffer(&uniform_buffer_desc, nullptr, &uniform_buffer_);
+    std::string uniform_buffer_name = "gltf_uniform_buffer";
+    uniform_buffer_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(uniform_buffer_name.size()), uniform_buffer_name.c_str());
 }
 
 void GLTFModelComponent::draw()
 {
+    Annotation annotation("gltf model draw");
     auto context = Game::inst()->render().context();
     auto device = Game::inst()->render().device();
 
@@ -298,9 +315,11 @@ void GLTFModelComponent::draw()
     vertices_.buffer.bind();
     indices_.buffer.bind();
 
+    glm::mat4 transform_matrix = model_transform_ * Game::inst()->render().camera_vp();
+
     D3D11_MAPPED_SUBRESOURCE mss;
     context->Map(uniform_buffer_, 0, D3D11_MAP_WRITE_DISCARD, 0, &mss);
-    UniformData data = { Game::inst()->render().camera_vp() };
+    UniformData data = { transform_matrix };
     memcpy(mss.pData, &data, sizeof(UniformData));
     context->Unmap(uniform_buffer_, 0);
     context->VSSetConstantBuffers(0, 1, &uniform_buffer_);

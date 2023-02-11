@@ -18,6 +18,17 @@ Shader::~Shader()
     SAFE_RELEASE(input_layout_);
 }
 
+void Shader::set_name(const std::string& name)
+{
+    std::string vs_name = name + "_vs";
+    std::string ps_name = name + "_ps";
+    vertex_shader_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(vs_name.size()), vs_name.c_str());
+    pixel_shader_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(ps_name.size()), ps_name.c_str());
+
+    std::string il_name = name + "_input_layout";
+    input_layout_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(il_name.size()), il_name.c_str());
+}
+
 void Shader::set_vs_shader(const std::string& filename,
                            const std::string& entrypoint,
                            D3D_SHADER_MACRO* macro, ID3DInclude* include)

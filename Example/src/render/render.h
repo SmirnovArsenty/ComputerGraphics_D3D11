@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <wrl.h>
 #include <d3d11.h>
+#include <d3d11_1.h>
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -38,6 +39,8 @@ private:
 
     Camera* camera_{ nullptr };
 
+    ID3DUserDefinedAnnotation* user_defined_annotation_{ nullptr };
+
 public:
     Render() = default;
     ~Render() = default;
@@ -59,5 +62,7 @@ public:
     // handle camera
     void camera_update(float delta_x, float delta_y);
 
-    DirectX::XMMATRIX camera_vp() const;
+    glm::mat4 camera_vp() const;
+
+    ID3DUserDefinedAnnotation* user_defined_annotation() const;
 };
