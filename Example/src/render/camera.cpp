@@ -1,8 +1,11 @@
 #include <windows.h>
 #include <chrono>
+#include <glm/glm.hpp>
+#include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include <cmath>
-#include <directxmath.h>
 #include <sstream>
 
 #include "core/game.h"
@@ -17,33 +20,10 @@ Camera::~Camera()
 {
 }
 
-void Camera::set_camera(glm::vec3 position, glm::vec3 target)
+void Camera::set_camera(glm::vec3 position, glm::quat rotation)
 {
     position_ = position;
-    target_ = target;
-}
-
-void Camera::move_forward(float delta)
-{
-    glm::vec3 forward = glm::normalize(target_ - position_);
-
-    position_ += forward * delta;
-}
-
-void Camera::move_right(float delta)
-{
-    glm::vec3 forward = glm::normalize(target_ - position_);
-    glm::vec3 up = glm::vec3(0.f, 1.f, 0.f);
-    glm::vec3 right = glm::cross(up, forward);
-    // up = glm::cross(forward, right);
-
-    position_ += right * delta;
-}
-
-void Camera::move_up(float delta)
-{
-    position_ += glm::vec3(0.f, delta, 0.f);
-    target_ += glm::vec3(0.f, delta, 0.f);
+    rotation_ = rotation;
 }
 
 void Camera::pitch(float delta)
@@ -54,19 +34,27 @@ void Camera::pitch(float delta)
         return;
     }
 
-    glm::vec3 forward = glm::normalize(target_ - position_);
-    glm::vec3 up = glm::vec3(0.f, 1.f, 0.f);
-    glm::vec3 right = glm::cross(up, forward);
-    up = glm::cross(forward, right);
+    float scaled_delta_rotation = {
+        delta * std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count() / 1e4f
+    };
 
-    target_ = position_ + glm::normalize(forward +
-                        up * (delta * std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count() / 1e9f));
+    glm::quat qx = glm::angleAxis(scaled_delta_rotation, glm::vec3(0.f, 0.f, 1.f));
 
-    forward = glm::normalize(target_ - position_);
-    if (forward == glm::vec3(0.f, 1.f, 0.f) || forward == glm::vec3(0.f, -1.f, 0.f))
-    {
-        target_ += glm::vec3(0.1f, 0.f, 0.f);
+    glm::quat orientation = glm::normalize(rotation_ * qx);
+    glm::vec3 euler = glm::degrees(glm::eulerAngles(orientation));
+    if (glm::abs(euler.z) - 180.0f <= glm::epsilon<float>()) {
+        if (euler.x <= -90.0f) {
+            euler.x += 180.0f;
+        }
+        else if (euler.x >= 90.0f) {
+            euler.x -= 180.0f;
+        }
     }
+    if (abs(euler.x) > 85.0f) {
+        orientation = rotation_;
+    }
+    rotation_ = orientation;
+
     last_time = now;
 }
 
@@ -78,54 +66,51 @@ void Camera::yaw(float delta)
         return;
     }
 
-    glm::vec3 forward = glm::normalize(target_ - position_);
-    glm::vec3 up = glm::vec3(0.f, 1.f, 0.f);
-    glm::vec3 right = glm::cross(up, forward);
-    up = glm::cross(forward, right);
+    float scaled_delta_rotation = {
+        delta * std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count() / 1e4f
+    };
 
-    target_ = position_ + glm::normalize(forward +
-                        right * (delta * std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count() / 1e9f));
+    glm::quat qy = glm::angleAxis(scaled_delta_rotation, glm::vec3(0.f, 1.f, 0.f));
+    glm::quat orientation = glm::normalize(qy * rotation_);
+    rotation_ = orientation;
 
     last_time = now;
 }
 
-glm::mat4 Camera::VP() const
+glm::mat4 Camera::view() const
 {
-    glm::vec3 forward = glm::normalize(target_ - position_);
-    glm::vec3 up = glm::vec3(0.f, 1.f, 0.f);
-    glm::vec3 right = glm::cross(up, forward);
-    up = glm::cross(forward, right);
+    glm::mat4 world_matrix = glm::translate(glm::mat4(1.0), position_) *
+                             glm::mat4_cast(rotation_) *
+                             glm::scale(glm::mat4(1.0), glm::vec3(1.f));
 
-    glm::mat4 view;
-    view[0] = glm::vec4(right, 0.f); // column fill
-    view[1] = glm::vec4(up, 0.f);
-    view[2] = glm::vec4(forward, 0.f);
-    view[3] = glm::vec4(position_, 1.f);
+    return glm::inverse(world_matrix);
+}
 
+// static
+glm::mat4 Camera::proj()
+{
     RECT rc;
     GetWindowRect(Game::inst()->win().get_window(), &rc);
     float width = float(rc.right - rc.left);
     float height = float(rc.bottom - rc.top);
 
-    width = width / height;
-    height = 1.f;
+    float aspect_ratio = width / height;
 
-    constexpr float near_ = 0.1f;
-    constexpr float far_ = 10000.f;
+    constexpr float near_plane = 1e1f;
+    constexpr float far_plane = 1e4f;
 
-    glm::mat4 proj = glm::identity<glm::mat4>();
-    proj[0] = glm::vec4(2 * near_ / width, 0, 0, 0);
-    proj[1] = glm::vec4(0, 2 * near_ / height, 0, 0);
-    proj[2] = glm::vec4(0, 0, (far_ + near_) / (near_ - far_), -1);
-    proj[3] = glm::vec4(0, 0, 2 * far_ * near_ / (near_ - far_), 0);
+    // default fov - 60 degree
+    float fov = glm::degrees(60.f);
+    auto vfov = static_cast<float>(2 * atan(tan(fov / 2) * (1.0 / aspect_ratio)));
 
-    // DirectX::XMVECTOR pos = DirectX::XMVectorSet(position_.x, position_.y, position_.z, 0.f);
-    // DirectX::XMVECTOR target = DirectX::XMVectorSet(target_.x, target_.y, target_.z, 0.f);
-    // DirectX::XMVECTOR dx_up = DirectX::XMVectorSet(up.x, up.y, up.z, 0.f);
-    // DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(pos, target, dx_up);
-    // DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveLH(width, height, near_, far_);
+    float field_of_view = aspect_ratio > 1.0f ? fov : vfov;
+    // using reversed depth buffer, so far_plane and near_plane are swapped
+    return glm::perspective(field_of_view, aspect_ratio, far_plane, near_plane);
+}
 
-    return view * proj;
+glm::mat4 Camera::view_proj() const
+{
+    return view() * proj();
 }
 
 void Camera::update()
@@ -136,37 +121,36 @@ void Camera::update()
         return;
     }
 
-    float delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count();
+    float delta = float(std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count()) * 1e6f;
 
-    if (!((GetKeyState('W') & 0x8000) && (GetKeyState('S') & 0x8000))) {
-        if (GetKeyState('W') & 0x8000) { // move forward
-            move_forward(delta);
-        } else if (GetKeyState('S') & 0x8000) { // move backward
-            move_forward(-delta);
-        }
+    glm::vec3 delta_translation(0.f);
+    glm::vec3 aligned_translation(0.f);
+
+    if (GetKeyState('W') & 0x8000) { // move forward
+        delta_translation.z += delta;
+    }
+    if (GetKeyState('S') & 0x8000) { // move backward
+        delta_translation.z -= delta;
     }
 
-    if (!((GetKeyState('D') & 0x8000) && (GetKeyState('A') & 0x8000))) {
-        if (GetKeyState('D') & 0x8000) { // move right
-            move_forward(delta);
-        } else if (GetKeyState('A') & 0x8000) { // move left
-            move_forward(-delta);
-        }
+    if (GetKeyState('D') & 0x8000) { // move right
+        delta_translation.x += delta;
+    }
+    if (GetKeyState('A') & 0x8000) { // move left
+        delta_translation.x -= delta;
     }
 
-    if (GetKeyState(VK_LSHIFT) & 0x8000)
+    if (GetKeyState(VK_SPACE) & 0x8000) // move up
     {
-        move_up(delta);
+        aligned_translation.y += delta;
     }
-    if (GetKeyState(VK_LCONTROL) & 0x8000)
+    if (GetKeyState('C') & 0x8000) // move down
     {
-        move_up(-delta);
+        aligned_translation.y -= delta;
     }
+
+    const auto v = (delta_translation * glm::conjugate(rotation_));
+    position_ += v + aligned_translation;
+
     last_time = now;
-
-    std::stringstream camera_log;
-    camera_log << "Camera status:" << "\n";
-    camera_log << "\t\tposition: " << position_.x << ", " << position_.y << ", " << position_.z << "\n";
-    camera_log << "\t\ttarget: " << target_.x << ", " << target_.y << ", " << target_.z << "\n";
-    OutputDebugString(camera_log.str().c_str());
 }

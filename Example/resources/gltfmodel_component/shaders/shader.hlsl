@@ -17,20 +17,27 @@ struct PS_IN
 struct PS_OUT
 {
     float4 color : SV_Target;
-    float depth : SV_Depth;
 };
 
 cbuffer UniformData : register(b0)
 {
-    float4x4 mvp;
+    float4x4 model;
+    float4x4 view_proj;
 };
 
 PS_IN VSMain( VS_IN input )
 {
     PS_IN output = (PS_IN)0;
 
-    output.pos = mul(float4(input.pos, 0.f), mvp);
-    output.col = float4(input.normal, 1.f);
+    float4 model_pos = mul(float4(input.pos, 1.f), model);
+
+    float3 light_pos = float3(0.f, 100.f, 0.f);
+    float light_dot = dot(input.normal, normalize(light_pos - model_pos.xyz));
+    float4 col = float4(float3(light_dot, light_dot, light_dot), 1.f);
+
+    // float4x4 MVP = mul(mul(model, view), proj);
+    output.pos = mul(model_pos, view_proj);
+    output.col = col;
     output.normal = input.normal;
     output.uv = input.uv;
 
@@ -39,15 +46,8 @@ PS_IN VSMain( VS_IN input )
 
 PS_OUT PSMain( PS_IN input ) : SV_Target
 {
-    float3 light_pos = float3(0.f, 10000.f, 0.f);
-    float light_dot = dot(input.normal, normalize(light_pos - input.pos.xyz));
-    float4 col = float4(float3(light_dot, light_dot, light_dot), 1.f);
-    
-    float depth = input.pos.w;
-
     PS_OUT res = (PS_OUT)0;
-    res.color = col;
-    res.depth = depth;
+    res.color = input.col;
 
     return res;
 }

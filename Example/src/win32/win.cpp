@@ -7,6 +7,8 @@
 // static
 LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lparam)
 {
+    static int32_t old_x = 0;
+    static int32_t old_y = 0;
     switch (message)
     {
         case WM_GETMINMAXINFO:
@@ -48,19 +50,32 @@ LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lpa
         {
             if (wparam & MK_LBUTTON) // lbutton pressed
             { // drag handle
-                static uint32_t old_x = 0;
-                static uint32_t old_y = 0;
-                uint32_t x = LOWORD(lparam);
-                uint32_t y = HIWORD(lparam);
+                int32_t x = LOWORD(lparam);
+                int32_t y = HIWORD(lparam);
                 if (old_x == 0 && old_y == 0) {
                     old_x = x;
                     old_y = y;
                     return 0;
                 }
-                RECT rc;
-                GetWindowRect(hWnd, &rc);
-                Game::inst()->mouse_drag(float(x - old_x), float(y - old_y));
+                float delta_x = float(x - old_x);
+                if (abs(delta_x) > 20) {
+                    delta_x = 0;
+                }
+                float delta_y = float(y - old_y);
+                if (abs(delta_y) > 20) {
+                    delta_y = 0;
+                }
+                Game::inst()->mouse_drag(delta_x, delta_y);
+                old_x = x;
+                old_y = y;
             }
+            return 0;
+        }
+        case WM_LBUTTONDOWN:
+        case WM_LBUTTONUP:
+        {
+            old_x = 0;
+            old_y = 0;
             return 0;
         }
         case WM_DESTROY:

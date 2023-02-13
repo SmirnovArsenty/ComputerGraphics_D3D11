@@ -113,7 +113,7 @@ void Game::toggle_fullscreen()
 
 void Game::mouse_drag(float delta_x, float delta_y)
 {
-    render_->camera_update(delta_x, delta_y);
+    render_->camera_update(delta_x, -delta_y);
 }
 
 const Win& Game::win() const

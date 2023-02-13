@@ -62,7 +62,9 @@ public:
     // handle camera
     void camera_update(float delta_x, float delta_y);
 
-    glm::mat4 camera_vp() const;
+    glm::mat4 camera_view() const;
+    glm::mat4 camera_proj() const;
+    glm::mat4 camera_view_proj() const;
 
     ID3DUserDefinedAnnotation* user_defined_annotation() const;
 };

@@ -123,7 +123,8 @@ private:
     ID3D11RasterizerState* rasterizer_state_{ nullptr };
 
     struct UniformData {
-        glm::mat4 mvp;
+        glm::mat4 model;
+        glm::mat4 view_proj;
     };
 
     ID3D11Buffer* uniform_buffer_;

@@ -315,11 +315,12 @@ void GLTFModelComponent::draw()
     vertices_.buffer.bind();
     indices_.buffer.bind();
 
-    glm::mat4 transform_matrix = model_transform_ * Game::inst()->render().camera_vp();
-
     D3D11_MAPPED_SUBRESOURCE mss;
     context->Map(uniform_buffer_, 0, D3D11_MAP_WRITE_DISCARD, 0, &mss);
-    UniformData data = { transform_matrix };
+    UniformData data = {
+        model_transform_,
+        Game::inst()->render().camera_view_proj()
+    };
     memcpy(mss.pData, &data, sizeof(UniformData));
     context->Unmap(uniform_buffer_, 0);
     context->VSSetConstantBuffers(0, 1, &uniform_buffer_);
@@ -333,8 +334,6 @@ void GLTFModelComponent::draw()
             context->DrawIndexed(primitive.indexCount, primitive.firstIndex, 0);
         }
     }
-
-    context->DrawIndexed(indices_.buffer.count(), 0, 0);
 }
 
 void GLTFModelComponent::reload()
