@@ -106,12 +106,12 @@ void Render::initialize()
     depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
     depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
     depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_LESS;
+    depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
     depth_stencil_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
     depth_stencil_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
     depth_stencil_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    depth_stencil_desc.BackFace.StencilFunc = D3D11_COMPARISON_LESS;
+    depth_stencil_desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
     D3D11_CHECK(device_->CreateDepthStencilState(&depth_stencil_desc, &depth_stencil_state_));
 

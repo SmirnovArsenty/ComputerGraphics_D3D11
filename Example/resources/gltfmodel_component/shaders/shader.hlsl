@@ -35,9 +35,8 @@ PS_IN VSMain( VS_IN input )
     float light_dot = dot(input.normal, normalize(light_pos - model_pos.xyz));
     float4 col = float4(float3(light_dot, light_dot, light_dot), 1.f);
 
-    // float4x4 MVP = mul(mul(model, view), proj);
     output.pos = mul(model_pos, view_proj);
-    output.col = col;
+    output.col = float4(input.normal, 1.f);
     output.normal = input.normal;
     output.uv = input.uv;
 

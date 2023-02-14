@@ -79,11 +79,11 @@ void Camera::yaw(float delta)
 
 glm::mat4 Camera::view() const
 {
-    glm::mat4 world_matrix = glm::translate(glm::mat4(1.0), position_) *
-                             glm::mat4_cast(rotation_) *
-                             glm::scale(glm::mat4(1.0), glm::vec3(1.f));
+    glm::mat4 world_matrix = glm::translate(glm::mat4(1.0), position_)
+                             * glm::mat4_cast(rotation_);
 
-    return glm::inverse(world_matrix);
+    return glm::transpose(world_matrix);
+    return glm::transpose(glm::lookAt(glm::vec3(100.f, 1e2f, 1e2f), glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f)));//inverse(world_matrix);
 }
 
 // static
@@ -96,7 +96,7 @@ glm::mat4 Camera::proj()
 
     float aspect_ratio = width / height;
 
-    constexpr float near_plane = 1e1f;
+    constexpr float near_plane = 1.f;
     constexpr float far_plane = 1e4f;
 
     // default fov - 60 degree
@@ -105,7 +105,7 @@ glm::mat4 Camera::proj()
 
     float field_of_view = aspect_ratio > 1.0f ? fov : vfov;
     // using reversed depth buffer, so far_plane and near_plane are swapped
-    return glm::perspective(field_of_view, aspect_ratio, far_plane, near_plane);
+    return glm::perspective(field_of_view, aspect_ratio, near_plane, far_plane);//, near_plane);
 }
 
 glm::mat4 Camera::view_proj() const

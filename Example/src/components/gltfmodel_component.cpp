@@ -282,7 +282,7 @@ void GLTFModelComponent::initialize()
     shader_.set_name("gltf_shader");
 
     CD3D11_RASTERIZER_DESC rastDesc = {};
-    rastDesc.CullMode = D3D11_CULL_NONE;
+    rastDesc.CullMode = D3D11_CULL_BACK;
     rastDesc.FillMode = D3D11_FILL_SOLID; // D3D11_FILL_WIREFRAME;
 
     auto device = Game::inst()->render().device();
