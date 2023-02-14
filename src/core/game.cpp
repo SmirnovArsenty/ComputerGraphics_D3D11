@@ -209,7 +209,6 @@ void Game::handle_keyboard(uint16_t key, uint32_t message)
     HANDLE_CHAR_KEY(b);
     HANDLE_CHAR_KEY(n);
     HANDLE_CHAR_KEY(m);
-    HANDLE_CHAR_KEY(d);
     HANDLE_VK_KEY(VK_SHIFT, shift);
     HANDLE_VK_KEY(VK_CONTROL, ctrl);
     HANDLE_VK_KEY(VK_MENU, alt);
