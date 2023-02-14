@@ -4,7 +4,7 @@
 #include "core/game.h"
 #include "win32/win.h"
 #include "d3d11_common.h"
-#include "shader.h"
+#include "resource/shader.h"
 #include "camera.h"
 
 void Render::initialize()
@@ -180,8 +180,6 @@ void Render::prepare_frame()
     viewport.MaxDepth = 1.0f;
 
     context_->RSSetViewports(1, &viewport);
-
-    camera_->update();
 }
 
 void Render::prepare_resources()
@@ -282,7 +280,7 @@ void Render::destroy_depth_stencil_texture_and_view()
     SAFE_RELEASE(depth_stencil_view_);
 }
 
-const Camera* Render::camera() const
+Camera* Render::camera() const
 {
     return camera_;
 }

@@ -28,11 +28,7 @@ void Camera::set_camera(glm::vec3 position, glm::quat rotation)
 
 void Camera::pitch(float delta) const
 {
-    float scaled_delta_rotation = {
-        delta * update_delta_ / 1e4f
-    };
-
-    glm::quat qx = glm::angleAxis(scaled_delta_rotation, glm::vec3(1.f, 0.f, 0.f));
+    glm::quat qx = glm::angleAxis(delta, glm::vec3(1.f, 0.f, 0.f));
 
     glm::quat orientation = glm::normalize(rotation_ * qx);
     glm::vec3 euler = glm::degrees(glm::eulerAngles(orientation));
@@ -52,11 +48,7 @@ void Camera::pitch(float delta) const
 
 void Camera::yaw(float delta) const
 {
-    float scaled_delta_rotation = {
-        delta * update_delta_ / 1e4f
-    };
-
-    glm::quat qy = glm::angleAxis(scaled_delta_rotation, glm::vec3(0.f, 1.f, 0.f));
+    glm::quat qy = glm::angleAxis(delta, glm::vec3(0.f, 1.f, 0.f));
     glm::quat orientation = glm::normalize(qy * rotation_);
     rotation_ = orientation;
 }
@@ -117,48 +109,18 @@ const glm::vec3 Camera::direction() const
     return glm::normalize(glm::vec3(forward.x / forward.w, forward.y / forward.w, forward.z / forward.w));
 }
 
-void Camera::update()
+void Camera::move_forward(float delta)
 {
-    static auto last_time = std::chrono::steady_clock::now();
-    auto now = std::chrono::steady_clock::now();
-    if (last_time == now) {
-        return;
-    }
-    update_delta_ = float(std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count());
-    last_time = now;
+    position_ += glm::vec3(0.f, 0.f, delta) * glm::conjugate(rotation_);
+}
 
-    float delta = update_delta_ / 10.f;
+void Camera::move_right(float delta)
+{
+    // right vector is negative x (right-hand axis)
+    position_ += glm::vec3(-delta, 0.f, 0.f) * glm::conjugate(rotation_);
+}
 
-    if (GetKeyState(VK_LSHIFT) & 0x8000) {
-        delta *= 1e1f;
-    }
-
-    glm::vec3 delta_translation(0.f);
-    glm::vec3 aligned_translation(0.f);
-
-    if (GetKeyState('W') & 0x8000) { // move forward
-        delta_translation.z += delta;
-    }
-    if (GetKeyState('S') & 0x8000) { // move backward
-        delta_translation.z -= delta;
-    }
-
-    if (GetKeyState('D') & 0x8000) { // move right
-        delta_translation.x += delta;
-    }
-    if (GetKeyState('A') & 0x8000) { // move left
-        delta_translation.x -= delta;
-    }
-
-    if (GetKeyState(VK_SPACE) & 0x8000) // move up
-    {
-        aligned_translation.y += delta;
-    }
-    if (GetKeyState('C') & 0x8000) // move down
-    {
-        aligned_translation.y -= delta;
-    }
-
-    glm::vec3 v = delta_translation * glm::conjugate(rotation_);
-    position_ += v + aligned_translation;
+void Camera::move_up(float delta)
+{
+    position_ += glm::vec3(0.f, delta, 0.f);
 }

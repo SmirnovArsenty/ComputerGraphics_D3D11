@@ -1,4 +1,8 @@
+#include <Windows.h>
+#include <hidusage.h>
 #include <chrono>
+#include <string>
+#include <stdexcept>
 #include <string>
 #include "win.h"
 #include "core/game.h"
@@ -20,56 +24,34 @@ LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lpa
                 GetSystemMetrics(SM_CYBORDER) * 2;
             return 0;
         }
-        case WM_KEYUP:
+        case WM_INPUT:
         {
-            // OutputDebugString((TEXT("Key pressed: ") + std::to_string(wparam) + TEXT("\n")).c_str());
-            if (wparam == VK_ESCAPE) {
-                Game::inst()->set_destroy();
+            UINT dwSize;
+            GetRawInputData((HRAWINPUT)lparam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
+            BYTE* buffer = (BYTE*)alloca(dwSize);
+            if (!buffer)
+            {
+                throw std::runtime_error("Can not allocate memory buffer");
             }
 
-            if (wparam == 'F') {
-                RECT fullscreen_rc;
-                HDC hdc = GetDC(HWND_DESKTOP);
-                GetClipBox(hdc, &fullscreen_rc);
-                ReleaseDC(HWND_DESKTOP, hdc);
-                static RECT old_rc = fullscreen_rc;
-
-                RECT current_rc;
-                GetWindowRect(hWnd, &current_rc);
-                SetWindowPos(hWnd, nullptr,
-                             old_rc.left, old_rc.top,
-                             old_rc.right - old_rc.left, old_rc.bottom - old_rc.top,
-                             SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-                old_rc = current_rc;
-
-                Game::inst()->toggle_fullscreen();
+            if (GetRawInputData((HRAWINPUT)lparam, RID_INPUT, buffer, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize)
+            {
+                throw std::runtime_error("Error getting raw input data: wrong size");
             }
-            return 0;
-        }
-        case WM_MOUSEMOVE:
-        {
-            if (wparam & MK_RBUTTON) // lbutton pressed
-            { // drag handle
-                int32_t x = LOWORD(lparam);
-                int32_t y = HIWORD(lparam);
-                if (old_x == 0 && old_y == 0) {
-                    old_x = x;
-                    old_y = y;
-                    return 0;
-                }
-                float delta_x = float(x - old_x);
-                float delta_y = float(y - old_y);
-                Game::inst()->mouse_drag(delta_x, delta_y);
-                old_x = x;
-                old_y = y;
+
+            RAWINPUT* raw_input = (RAWINPUT*)buffer;
+            if (raw_input->header.dwType == RIM_TYPEKEYBOARD)
+            {
+                RAWKEYBOARD keyboard = raw_input->data.keyboard;
+                Game::inst()->handle_keyboard(keyboard.VKey, keyboard.Message);
             }
-            return 0;
-        }
-        case WM_RBUTTONDOWN:
-        case WM_RBUTTONUP:
-        {
-            old_x = 0;
-            old_y = 0;
+            else if (raw_input->header.dwType == RIM_TYPEMOUSE)
+            {
+                RAWMOUSE mouse = raw_input->data.mouse;
+                Game::inst()->handle_mouse(mouse.lLastX, mouse.lLastY, mouse.usButtonFlags);
+            }
+
+            DefRawInputProc(&raw_input, 1, sizeof(RAWINPUTHEADER));
             return 0;
         }
         case WM_DESTROY:
@@ -144,44 +126,39 @@ bool Win::initialize(uint32_t w, uint32_t h)
     SetFocus(hWnd_);
 
     ShowCursor(true);
+
+    // setup RawInput
+    {
+        RAWINPUTDEVICE raw_input_devices[2];
+        raw_input_devices[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
+        raw_input_devices[0].usUsage = HID_USAGE_GENERIC_MOUSE;
+        raw_input_devices[0].dwFlags = 0; // RIDEV_NOLEGACY ?
+        raw_input_devices[0].hwndTarget = hWnd_;
+
+        raw_input_devices[1].usUsagePage = HID_USAGE_PAGE_GENERIC;
+        raw_input_devices[1].usUsage = HID_USAGE_GENERIC_KEYBOARD;
+        raw_input_devices[1].dwFlags = 0; // RIDEV_NOLEGACY ?
+        raw_input_devices[1].hwndTarget = hWnd_;
+
+        // HID_USAGE_GENERIC_GAMEPAD ?
+
+        if (!RegisterRawInputDevices(raw_input_devices, static_cast<UINT>(std::size(raw_input_devices)), sizeof(RAWINPUTDEVICE)))
+        {
+            OutputDebugString(("Can not register raw input device. Error: " + std::to_string(GetLastError())).c_str());
+            throw std::runtime_error("Can not register raw input device");
+        }
+    }
+
     return true;
 }
 
 void Win::run()
 {
-    static std::chrono::time_point<std::chrono::steady_clock> prev_time {
-        std::chrono::steady_clock::now()
-    };
-    static float total_time = 0;
-    static uint32_t frame_count = 0;
-
     MSG msg{};
     while (PeekMessage(&msg, hWnd_, 0, 0, PM_REMOVE))
     {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
-    }
-
-    auto cur_time = std::chrono::steady_clock::now();
-    float delta_time = 
-        std::chrono::duration_cast<std::chrono::microseconds>(cur_time - prev_time).count()
-        / 1e6f;
-    prev_time = cur_time;
-
-    total_time += delta_time;
-    frame_count++;
-
-    if (total_time > 1.0f) {
-        float fps = frame_count / total_time;
-
-        total_time -= 1.0f;
-
-        char text[256];
-        sprintf_s(text, TEXT("FPS: %f\n"), fps);
-        // SetWindowText(hWnd_, text);
-        OutputDebugString(text);
-
-        frame_count = 0;
     }
 }
 

@@ -18,35 +18,68 @@ target_include_directories(glm INTERFACE ${GLM_DIR})
 
 ### end of dependencies
 
-set(sources 
-    src/main.cpp
-    
+set(group_core
     src/core/game.cpp
     src/core/game.h
+)
 
+set(group_render
     src/render/render.cpp
     src/render/render.h
-    
-    # debug groups
+
     src/render/annotation.cpp
     src/render/annotation.h
 
-    src/render/buffer.cpp
-    src/render/buffer.h
-    src/render/shader.cpp
-    src/render/shader.h
     src/render/camera.cpp
     src/render/camera.h
+)
 
+set(group_render_resource
+    src/render/resource/buffer.cpp
+    src/render/resource/buffer.h
+    src/render/resource/shader.cpp
+    src/render/resource/shader.h
+    src/render/resource/texture.cpp
+    src/render/resource/texture.h
+)
+
+set(group_component_common
     src/components/game_component.h
     src/components/game_component_decl.h
+)
 
+set(group_component_impl
     src/components/triangle_component.cpp
     src/components/gltfmodel_component.cpp
+)
 
+set(group_win32
     src/win32/win.cpp
     src/win32/win.h
 )
+
+set(sources
+    src/main.cpp
+
+    ${group_core}
+
+    ${group_render}
+    ${group_render_resource}
+
+    ${group_component_common}
+
+    ${group_component_impl}
+
+    ${group_win32}
+)
+
+source_group("" FILES src/main.cpp)
+source_group("core" FILES ${group_core})
+source_group("render" FILES ${group_render})
+source_group("render/resource" FILES ${group_render_resource})
+source_group("component/common" FILES ${group_component_common})
+source_group("component/impl" FILES ${group_component_impl})
+source_group("win32" FILES ${group_win32})
 
 add_executable(${CMAKE_PROJECT_NAME} WIN32 ${sources})
 

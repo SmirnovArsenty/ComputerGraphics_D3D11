@@ -10,9 +10,6 @@ private:
     // glm::vec3 target_{ 0.f, 0.f, 0.f };
     mutable glm::quat rotation_{ 1.f, 0.f, 0.f, 0.f};
 
-    // milliseconds
-    float update_delta_{ 0.f };
-
 public:
     Camera();
     ~Camera();
@@ -30,5 +27,7 @@ public:
     const glm::vec3 direction() const; // view vector
 
     // update camera position
-    void update();
+    void move_forward(float delta);
+    void move_right(float delta);
+    void move_up(float delta);
 };

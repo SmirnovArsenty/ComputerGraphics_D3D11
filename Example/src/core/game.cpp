@@ -1,3 +1,4 @@
+#include <chrono>
 #include "game.h"
 #include "win32/win.h"
 #include "render/render.h"
@@ -47,6 +48,35 @@ void Game::run()
 {
     while (!destroy_)
     {
+        // handle device inputs
+        {
+            { // move camera
+                Camera* camera = render_->camera();
+                float camera_move_delta = delta_time_ * 1e2f;
+                if (keyboard_state_.shift) {
+                    camera_move_delta *= 1e1f;
+                }
+                camera->move_forward(camera_move_delta * keyboard_state_.w);
+                camera->move_right(camera_move_delta * keyboard_state_.d);
+                camera->move_forward(-camera_move_delta * keyboard_state_.s);
+                camera->move_right(-camera_move_delta * keyboard_state_.a);
+                camera->move_up(camera_move_delta * keyboard_state_.space);
+                camera->move_up(-camera_move_delta * keyboard_state_.c);
+            }
+            { // rotate camera
+                const float camera_rotate_delta = delta_time_ / 1e1f;
+                if (mouse_state_.rbutton)
+                { // camera rotation with right button pressed
+                    render_->camera()->pitch(-mouse_state_.delta_y * camera_rotate_delta); // negate to convert from Win32 coordinates
+                    render_->camera()->yaw(mouse_state_.delta_x * camera_rotate_delta);
+                }
+            }
+
+            // clear mouse_state_ deltas
+            mouse_state_.delta_x = 0;
+            mouse_state_.delta_y = 0;
+        }
+
         // handle win messages
         win_->run(); // placed here to check `animating_` immediatelly
         if (!animating_){
@@ -75,6 +105,27 @@ void Game::run()
                 render_->end_frame();
             }
         }
+
+        // handle FPS
+        {
+            static auto prev_time {
+                std::chrono::steady_clock::now()
+            };
+            static float total_time = 0;
+            static uint32_t frame_count = 0;
+            auto cur_time = std::chrono::steady_clock::now();
+            delta_time_ = std::chrono::duration_cast<std::chrono::microseconds>(cur_time - prev_time).count() / 1e6f;
+            prev_time = cur_time;
+
+            total_time += delta_time_;
+            frame_count++;
+
+            if (total_time > 1.0f) {
+                // OutputDebugString(("FPS: " + std::to_string(frame_count / total_time) + "\n").c_str());
+                total_time -= 1.0f;
+                frame_count = 0;
+            }
+        }
     }
     // next step - destroy
 }
@@ -89,6 +140,11 @@ void Game::destroy()
 
     win_->destroy();
     render_->destroy_resources();
+}
+
+float Game::delta_time() const
+{
+    return delta_time_;
 }
 
 void Game::set_animating(bool animating)
@@ -112,10 +168,48 @@ void Game::toggle_fullscreen()
     render_->fullscreen(fullscreen_);
 }
 
-void Game::mouse_drag(float delta_x, float delta_y)
+void Game::handle_keyboard(uint16_t key, uint32_t message)
 {
-    render_->camera()->pitch(-delta_y);
-    render_->camera()->yaw(delta_x);
+#define HANDLE_CHAR_KEY(code) \
+    key == ((#code)[0] + 'A' - 'a') && (keyboard_state_.code = (message == WM_KEYDOWN))
+
+#define HANDLE_VK_KEY(code, state_key) \
+    key == (code) && (keyboard_state_.state_key = (message == WM_KEYDOWN))
+
+    HANDLE_CHAR_KEY(w);
+    HANDLE_CHAR_KEY(a);
+    HANDLE_CHAR_KEY(s);
+    HANDLE_CHAR_KEY(d);
+    HANDLE_CHAR_KEY(c);
+    HANDLE_VK_KEY(VK_SHIFT, shift);
+    HANDLE_VK_KEY(VK_SPACE, space);
+
+#undef HANDLE_CHAR_KEY
+#undef HANDLE_VK_KEY
+}
+
+void Game::handle_mouse(float delta_x, float delta_y, uint16_t flags)
+{
+    if (flags & RI_MOUSE_LEFT_BUTTON_DOWN) {
+        mouse_state_.lbutton = true;
+    } else if (flags & RI_MOUSE_LEFT_BUTTON_UP) {
+        mouse_state_.lbutton = false;
+    }
+
+    if (flags & RI_MOUSE_MIDDLE_BUTTON_DOWN) {
+        mouse_state_.mbutton = true;
+    } else if (flags & RI_MOUSE_MIDDLE_BUTTON_UP) {
+        mouse_state_.mbutton = false;
+    }
+
+    if (flags & RI_MOUSE_RIGHT_BUTTON_DOWN) {
+        mouse_state_.rbutton = true;
+    } else if (flags & RI_MOUSE_RIGHT_BUTTON_UP) {
+        mouse_state_.rbutton = false;
+    }
+
+    mouse_state_.delta_x += delta_x;
+    mouse_state_.delta_y += delta_y;
 }
 
 const Win& Game::win() const

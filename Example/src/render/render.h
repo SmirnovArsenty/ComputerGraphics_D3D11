@@ -59,7 +59,7 @@ public:
     ID3D11Device* device() const;
     ID3D11DeviceContext* context() const;
 
-    const Camera* camera() const;
+    Camera* camera() const;
 
     ID3DUserDefinedAnnotation* user_defined_annotation() const;
 };

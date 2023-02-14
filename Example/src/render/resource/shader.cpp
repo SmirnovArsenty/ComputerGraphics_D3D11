@@ -2,9 +2,9 @@
 #include <d3dcompiler.h>
 
 #include "core/game.h"
-#include "render.h"
+#include "render/render.h"
 #include "shader.h"
-#include "d3d11_common.h"
+#include "render/d3d11_common.h"
 
 Shader::Shader() {}
 
