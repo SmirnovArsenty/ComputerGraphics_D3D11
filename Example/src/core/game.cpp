@@ -4,7 +4,7 @@
 #include "render/render.h"
 #include "render/annotation.h"
 #include "render/camera.h"
-#include "components/game_component.h"
+#include "components/common/game_component.h"
 
 Game::Game()
 {
@@ -48,6 +48,12 @@ void Game::run()
 {
     while (!destroy_)
     {
+        // handle win messages
+        win_->run(); // placed here to check `animating_` immediatelly
+        if (!animating_){
+            continue;
+        }
+
         // handle device inputs
         {
             { // move camera
@@ -77,18 +83,19 @@ void Game::run()
             mouse_state_.delta_y = 0;
         }
 
-        // handle win messages
-        win_->run(); // placed here to check `animating_` immediatelly
-        if (!animating_){
-            continue;
-        }
-
         {
             // prepares
             {
                 Annotation annotation("prepare resources");
                 render_->prepare_frame();
                 render_->prepare_resources();
+            }
+
+            { // update components
+                for (auto game_component : game_components_)
+                {
+                    game_component->update();
+                }
             }
 
             {
@@ -121,7 +128,7 @@ void Game::run()
             frame_count++;
 
             if (total_time > 1.0f) {
-                // OutputDebugString(("FPS: " + std::to_string(frame_count / total_time) + "\n").c_str());
+                OutputDebugString(("FPS: " + std::to_string(frame_count / total_time) + "\n").c_str());
                 total_time -= 1.0f;
                 frame_count = 0;
             }
@@ -138,8 +145,8 @@ void Game::destroy()
     }
     game_components_.clear();
 
-    win_->destroy();
     render_->destroy_resources();
+    win_->destroy();
 }
 
 float Game::delta_time() const
@@ -176,13 +183,48 @@ void Game::handle_keyboard(uint16_t key, uint32_t message)
 #define HANDLE_VK_KEY(code, state_key) \
     key == (code) && (keyboard_state_.state_key = (message == WM_KEYDOWN))
 
+    HANDLE_CHAR_KEY(q);
     HANDLE_CHAR_KEY(w);
+    HANDLE_CHAR_KEY(e);
+    HANDLE_CHAR_KEY(r);
+    HANDLE_CHAR_KEY(t);
+    HANDLE_CHAR_KEY(y);
+    HANDLE_CHAR_KEY(u);
+    HANDLE_CHAR_KEY(i);
+    HANDLE_CHAR_KEY(o);
+    HANDLE_CHAR_KEY(p);
     HANDLE_CHAR_KEY(a);
     HANDLE_CHAR_KEY(s);
     HANDLE_CHAR_KEY(d);
+    HANDLE_CHAR_KEY(f);
+    HANDLE_CHAR_KEY(g);
+    HANDLE_CHAR_KEY(h);
+    HANDLE_CHAR_KEY(j);
+    HANDLE_CHAR_KEY(k);
+    HANDLE_CHAR_KEY(l);
+    HANDLE_CHAR_KEY(z);
+    HANDLE_CHAR_KEY(x);
     HANDLE_CHAR_KEY(c);
+    HANDLE_CHAR_KEY(v);
+    HANDLE_CHAR_KEY(b);
+    HANDLE_CHAR_KEY(n);
+    HANDLE_CHAR_KEY(m);
+    HANDLE_CHAR_KEY(d);
     HANDLE_VK_KEY(VK_SHIFT, shift);
+    HANDLE_VK_KEY(VK_CONTROL, ctrl);
+    HANDLE_VK_KEY(VK_MENU, alt);
     HANDLE_VK_KEY(VK_SPACE, space);
+    HANDLE_VK_KEY(VK_RETURN, enter);
+    HANDLE_VK_KEY(VK_UP, up);
+    HANDLE_VK_KEY(VK_DOWN, down);
+    HANDLE_VK_KEY(VK_LEFT, left);
+    HANDLE_VK_KEY(VK_RIGHT, right);
+
+    if (key == VK_ESCAPE)
+    {
+        animating_ = false;
+        destroy_ = true;
+    }
 
 #undef HANDLE_CHAR_KEY
 #undef HANDLE_VK_KEY
@@ -220,4 +262,14 @@ const Win& Game::win() const
 const Render& Game::render() const
 {
     return *render_;
+}
+
+const Game::KeyboardState& Game::keyboard_state() const
+{
+    return keyboard_state_;
+}
+
+const Game::MouseState& Game::mouse_state() const
+{
+    return mouse_state_;
 }

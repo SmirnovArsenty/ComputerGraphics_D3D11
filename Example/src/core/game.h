@@ -16,28 +16,6 @@ private:
 
     float delta_time_{ 0.f };
 
-    struct
-    {
-        bool w = false;
-        bool a = false;
-        bool s = false;
-        bool d = false;
-        bool c = false;
-
-        bool shift = false;
-        bool space = false;
-    } keyboard_state_;
-
-    struct
-    {
-        float delta_x = 0.f;
-        float delta_y = 0.f;
-
-        bool lbutton = false;
-        bool mbutton = false;
-        bool rbutton = false;
-    } mouse_state_;
-
     bool destroy_{ false };
     bool animating_{ false };
     bool fullscreen_{ false };
@@ -48,6 +26,56 @@ private:
     Game(Game&) = delete;
     Game(const Game&&) = delete;
 public:
+    struct KeyboardState {
+        bool q = false;
+        bool w = false;
+        bool e = false;
+        bool r = false;
+        bool t = false;
+        bool y = false;
+        bool u = false;
+        bool i = false;
+        bool o = false;
+        bool p = false;
+        bool a = false;
+        bool s = false;
+        bool d = false;
+        bool f = false;
+        bool g = false;
+        bool h = false;
+        bool j = false;
+        bool k = false;
+        bool l = false;
+        bool z = false;
+        bool x = false;
+        bool c = false;
+        bool v = false;
+        bool b = false;
+        bool n = false;
+        bool m = false;
+
+        bool shift = false;
+        bool ctrl = false;
+        bool alt = false;
+        bool space = false;
+        bool enter = false;
+        bool up = false;
+        bool down = false;
+        bool left = false;
+        bool right = false;
+    };
+
+    struct MouseState
+    {
+        float delta_x = 0.f;
+        float delta_y = 0.f;
+        float delta_z = 0.f; // scroll
+
+        bool lbutton = false;
+        bool mbutton = false;
+        bool rbutton = false;
+    };
+
     static Game* inst();
     ~Game();
 
@@ -69,4 +97,11 @@ public:
 
     const Win& win() const;
     const Render& render() const;
+
+    const KeyboardState& keyboard_state() const;
+    const MouseState& mouse_state() const;
+
+private:
+    struct KeyboardState keyboard_state_;
+    struct MouseState mouse_state_;
 };

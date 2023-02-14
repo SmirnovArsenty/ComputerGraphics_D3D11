@@ -1,9 +1,9 @@
 #pragma once
+
 #include <string>
 #include <glm/glm.hpp>
-#include <directxmath.h>
 
-#include "game_component.h"
+#include "components/common/game_component.h"
 #include "render/resource/shader.h"
 #include "render/resource/buffer.h"
 
@@ -12,29 +12,6 @@ namespace tinygltf
 class Model;
 class Node;
 }
-
-class TriangleComponent : public GameComponent
-{
-private:
-    constexpr static char* resource_path_{ "./resources/triangle_component/" };
-
-    Shader shader_;
-
-    Buffer vertex_buffer_;
-    Buffer index_buffer_;
-
-    ID3D11RasterizerState* rasterizer_state_{ nullptr };
-
-public:
-    TriangleComponent();
-    ~TriangleComponent();
-
-    void initialize() override;
-    void draw() override;
-    void reload() override;
-    void update() override;
-    void destroy_resources() override;
-};
 
 class GLTFModelComponent : public GameComponent
 {
@@ -130,7 +107,7 @@ private:
         float res_1;
     };
 
-    ID3D11Buffer* uniform_buffer_;
+    ConstBuffer uniform_buffer_;
 
     glm::mat4 model_transform_;
 
@@ -144,5 +121,4 @@ public:
     void reload() override;
     void update() override;
     void destroy_resources() override;
-
 };

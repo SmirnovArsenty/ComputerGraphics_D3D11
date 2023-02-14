@@ -44,13 +44,17 @@ set(group_render_resource
 )
 
 set(group_component_common
-    src/components/game_component.h
-    src/components/game_component_decl.h
+    src/components/common/game_component.h
+    src/components/common/game_component_decl.h
 )
 
 set(group_component_impl
-    src/components/triangle_component.cpp
-    src/components/gltfmodel_component.cpp
+    src/components/impl/triangle_component.cpp
+    src/components/impl/triangle_component.h
+    src/components/impl/gltfmodel_component.cpp
+    src/components/impl/gltfmodel_component.h
+    src/components/impl/pingpong_component.cpp
+    src/components/impl/pingpong_component.h
 )
 
 set(group_win32

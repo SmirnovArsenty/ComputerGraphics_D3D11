@@ -14,9 +14,12 @@ Buffer::~Buffer()
     assert(resource_ == nullptr);
 }
 
-void Buffer::initialize(D3D11_BIND_FLAG bind_flags, void* data, UINT stride, UINT count, D3D11_USAGE usage)
+void Buffer::initialize(D3D11_BIND_FLAG bind_flags, void* data, UINT stride, UINT count, D3D11_USAGE usage, D3D11_CPU_ACCESS_FLAG cpu_access)
 {
     assert(resource_ == nullptr);
+    if (bind_flags == D3D11_BIND_CONSTANT_BUFFER) {
+        throw std::exception("Use ConstBuffer to create D3D11_BIND_CONSTANT_BUFFER");
+    }
 
     strides_.push_back(stride);
     offsets_.push_back(0); /// TODO: handle offsets
@@ -27,7 +30,7 @@ void Buffer::initialize(D3D11_BIND_FLAG bind_flags, void* data, UINT stride, UIN
 
     buffer_desc_.Usage = usage;
     buffer_desc_.BindFlags = bind_flags;
-    buffer_desc_.CPUAccessFlags = 0;
+    buffer_desc_.CPUAccessFlags = cpu_access;
     buffer_desc_.MiscFlags = 0;
     buffer_desc_.StructureByteStride = 0;
     buffer_desc_.ByteWidth = stride * count;
@@ -42,11 +45,13 @@ void Buffer::initialize(D3D11_BIND_FLAG bind_flags, void* data, UINT stride, UIN
 
 void Buffer::set_name(const std::string& name)
 {
+    assert(resource_ != nullptr);
     resource_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(name.size()), name.c_str());
 }
 
 void Buffer::bind(UINT slot)
 {
+    assert(resource_ != nullptr);
     auto context = Game::inst()->render().context();
 
     if (buffer_desc_.BindFlags == D3D11_BIND_VERTEX_BUFFER)
@@ -61,6 +66,11 @@ void Buffer::bind(UINT slot)
             context->IASetIndexBuffer(resource_, DXGI_FORMAT_R32_UINT, 0);
         }
     }
+    else if (buffer_desc_.BindFlags == D3D11_BIND_CONSTANT_BUFFER)
+    {
+        context->VSSetConstantBuffers(slot, 1, &resource_);
+        context->PSSetConstantBuffers(slot, 1, &resource_);
+    }
 }
 
 void Buffer::destroy()
@@ -71,4 +81,26 @@ void Buffer::destroy()
 UINT Buffer::count() const
 {
     return buffer_desc_.ByteWidth / strides_[0];
+}
+
+void ConstBuffer::initialize(UINT size, D3D11_USAGE usage, D3D11_CPU_ACCESS_FLAG cpu_access)
+{
+    buffer_desc_.Usage = usage;
+    buffer_desc_.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    buffer_desc_.CPUAccessFlags = cpu_access;
+    buffer_desc_.MiscFlags = 0;
+    buffer_desc_.StructureByteStride = 0;
+    buffer_desc_.ByteWidth = size;
+
+    auto device = Game::inst()->render().device();
+    D3D11_CHECK(device->CreateBuffer(&buffer_desc_, nullptr, &resource_));
+}
+
+void ConstBuffer::update_data(void* data)
+{
+    auto context = Game::inst()->render().context();
+    D3D11_MAPPED_SUBRESOURCE mss;
+    context->Map(resource_, 0, D3D11_MAP_WRITE_DISCARD, 0, &mss);
+    memcpy(mss.pData, data, buffer_desc_.ByteWidth);
+    context->Unmap(resource_, 0);
 }

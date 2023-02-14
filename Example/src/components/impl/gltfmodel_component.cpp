@@ -18,7 +18,7 @@
 #include "render/annotation.h"
 #include "core/game.h"
 #include "render/d3d11_common.h"
-#include "components/game_component_decl.h"
+#include "gltfmodel_component.h"
 
 GLTFModelComponent::GLTFModelComponent(const std::string& filename, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale) : gltf_filename_{ filename }
 {
@@ -164,7 +164,7 @@ void GLTFModelComponent::load_node(tinygltf::Model* model, tinygltf::Node* input
                 v.pos_uv_x = glm::vec4(glm::make_vec3(&position_buffer[i * 3]), uv.x);
                 v.normal_uv_y = glm::vec4(glm::normalize(normals_buffer ? glm::make_vec3(&normals_buffer[i * 3]) : glm::vec3(0.f)), uv.y);
                 /// TODO: remove this sin cos color
-                v.color = color_buffer ? glm::make_vec4(&color_buffer[i * 4]) : glm::vec4(sinf(vertex_count), cosf(vertex_count), sinf(vertex_count * 1.3), 1.f);
+                v.color = glm::vec4(1.f); // color_buffer ? glm::make_vec4(&color_buffer[i * 4]) : glm::vec4(sinf(vertex_count), cosf(vertex_count), sinf(vertex_count * 1.3), 1.f);
                 vertices_.vertex_buffer_raw.push_back(v);
             }
 
@@ -284,18 +284,8 @@ void GLTFModelComponent::initialize()
     auto device = Game::inst()->render().device();
     D3D11_CHECK(device->CreateRasterizerState(&rastDesc, &rasterizer_state_));
 
-    D3D11_BUFFER_DESC uniform_buffer_desc;
-
-    uniform_buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    uniform_buffer_desc.ByteWidth = sizeof(UniformData);
-    uniform_buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    uniform_buffer_desc.MiscFlags = 0;
-    uniform_buffer_desc.StructureByteStride = 0;
-    uniform_buffer_desc.Usage = D3D11_USAGE_DYNAMIC;
-
-    device->CreateBuffer(&uniform_buffer_desc, nullptr, &uniform_buffer_);
-    std::string uniform_buffer_name = "gltf_uniform_buffer";
-    uniform_buffer_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(uniform_buffer_name.size()), uniform_buffer_name.c_str());
+    uniform_buffer_.initialize(sizeof(UniformData), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+    uniform_buffer_.set_name("gltf_uniform_buffer");
 }
 
 void GLTFModelComponent::draw()
@@ -311,18 +301,14 @@ void GLTFModelComponent::draw()
     vertices_.buffer.bind();
     indices_.buffer.bind();
 
-    D3D11_MAPPED_SUBRESOURCE mss;
-    context->Map(uniform_buffer_, 0, D3D11_MAP_WRITE_DISCARD, 0, &mss);
     const Camera* camera = Game::inst()->render().camera();
     UniformData data = {};
     data.model = model_transform_;
     data.view_proj = camera->view_proj();
     data.camera_pos = camera->position();
     data.camera_dir = camera->direction();
-    memcpy(mss.pData, &data, sizeof(UniformData));
-    context->Unmap(uniform_buffer_, 0);
-    context->VSSetConstantBuffers(0, 1, &uniform_buffer_);
-    context->PSSetConstantBuffers(0, 1, &uniform_buffer_);
+    uniform_buffer_.update_data(&data);
+    uniform_buffer_.bind(0);
 
     context->RSSetState(rasterizer_state_);
 
@@ -349,5 +335,5 @@ void GLTFModelComponent::destroy_resources()
     indices_.buffer.destroy();
 
     SAFE_RELEASE(rasterizer_state_);
-    SAFE_RELEASE(uniform_buffer_);
+    uniform_buffer_.destroy();
 }

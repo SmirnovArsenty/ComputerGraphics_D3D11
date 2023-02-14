@@ -6,7 +6,7 @@
 #include <string>
 #include "win.h"
 #include "core/game.h"
-#include "components/game_component_decl.h"
+#include "components/common/game_component_decl.h"
 
 // static
 LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lparam)
@@ -48,7 +48,7 @@ LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lpa
             else if (raw_input->header.dwType == RIM_TYPEMOUSE)
             {
                 RAWMOUSE mouse = raw_input->data.mouse;
-                Game::inst()->handle_mouse(mouse.lLastX, mouse.lLastY, mouse.usButtonFlags);
+                Game::inst()->handle_mouse(float(mouse.lLastX), float(mouse.lLastY), mouse.usButtonFlags);
             }
 
             DefRawInputProc(&raw_input, 1, sizeof(RAWINPUTHEADER));

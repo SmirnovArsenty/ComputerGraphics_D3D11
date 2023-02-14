@@ -29,4 +29,6 @@ public:
     void set_input_layout(D3D11_INPUT_ELEMENT_DESC*, uint32_t);
 
     void use();
+
+    void destroy();
 };

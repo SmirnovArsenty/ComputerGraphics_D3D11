@@ -8,15 +8,7 @@
 
 Shader::Shader() {}
 
-Shader::~Shader()
-{
-    SAFE_RELEASE(vertex_shader_);
-    SAFE_RELEASE(vertex_bc_);
-    SAFE_RELEASE(pixel_shader_);
-    SAFE_RELEASE(pixel_bc_);
-
-    SAFE_RELEASE(input_layout_);
-}
+Shader::~Shader() {}
 
 void Shader::set_name(const std::string& name)
 {
@@ -110,7 +102,19 @@ void Shader::set_input_layout(D3D11_INPUT_ELEMENT_DESC* inputs, uint32_t count)
 void Shader::use()
 {
     auto context = Game::inst()->render().context();
-    context->IASetInputLayout(input_layout_);
+    if (input_layout_ != nullptr) {
+        context->IASetInputLayout(input_layout_);
+    }
     context->VSSetShader(vertex_shader_, nullptr, 0);
     context->PSSetShader(pixel_shader_, nullptr, 0);
+}
+
+void Shader::destroy()
+{
+    SAFE_RELEASE(vertex_shader_);
+    SAFE_RELEASE(vertex_bc_);
+    SAFE_RELEASE(pixel_shader_);
+    SAFE_RELEASE(pixel_bc_);
+
+    SAFE_RELEASE(input_layout_);
 }

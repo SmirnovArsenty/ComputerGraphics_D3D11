@@ -3,7 +3,7 @@
 #include "render/render.h"
 #include "core/game.h"
 #include "render/d3d11_common.h"
-#include "components/game_component_decl.h"
+#include "triangle_component.h"
 
 TriangleComponent::TriangleComponent() {}
 TriangleComponent::~TriangleComponent() {}
