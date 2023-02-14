@@ -66,6 +66,8 @@ void PingpongComponent::draw()
 
     context->RSSetState(rasterizer_state_);
 
+    context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
     // draw bricks
     brick_shader_.use();
     brick_index_buffer_.bind();
@@ -95,8 +97,8 @@ void PingpongComponent::reload()
 void PingpongComponent::update()
 {
     const Game::KeyboardState& keyboard = Game::inst()->keyboard_state();
-    const float brick_move_delta = Game::inst()->delta_time() * 1e0f;
-    const float circle_move_delta = Game::inst()->delta_time() * 1e0f;
+    const float brick_move_delta = Game::inst()->delta_time() * 1e0f * 1.5f;
+    const float circle_move_delta = Game::inst()->delta_time() * 1e0f * 2;
 
     // handle circle fly
     {
@@ -152,8 +154,7 @@ void PingpongComponent::update()
             {
                 if (circle_.position.x > opponent_.position.x)
                 {
-                    // you won!
-                    MessageBox(NULL, "Winner!", "You won!", MB_OK | MB_ICONEXCLAMATION);
+                    MessageBox(NULL, "You won!", "Winner!", MB_OK | MB_ICONEXCLAMATION);
                     Game::inst()->set_destroy();
                 }
                 if (circle_.position.x + circle_.radius > opponent_.position.x - opponent_.height / 2.f &&
@@ -161,30 +162,32 @@ void PingpongComponent::update()
                     circle_.position.y - circle_.radius > opponent_.position.y - opponent_.width / 2.f)
                 { // brick hit
                     // reflect circle
-                    srand(static_cast<unsigned>(Game::inst()->delta_time()));
+                    srand(static_cast<unsigned>(Game::inst()->delta_time() * 1e9f));
                     circle_move_direction_ = glm::normalize(circle_.position - opponent_.position);
-                    circle_move_direction_.y += (2.f * rand() / RAND_MAX - 1.f) / 1e0f;
+                    circle_move_direction_.y += (2.f * rand() / RAND_MAX - 1.f) * 1e-2f;
                     circle_move_direction_ = glm::normalize(circle_move_direction_);
 
-                    // 
+                    // TODO: reduce size by every hit
+                    opponent_.width *= 0.99f;
                 }
             }
             else // move to player
             {
                 if (circle_.position.x < player_.position.x)
                 {
-                    // you lose!
-                    MessageBox(NULL, "Loser!", "You lose!", MB_OK | MB_ICONEXCLAMATION);
+                    MessageBox(NULL, "You lose!", "Loser!", MB_OK | MB_ICONEXCLAMATION);
                     Game::inst()->set_destroy();
                 }
                 if (circle_.position.x - circle_.radius < player_.position.x + player_.height / 2.f &&
                     circle_.position.y + circle_.radius < player_.position.y + player_.width / 2.f &&
                     circle_.position.y - circle_.radius > player_.position.y - player_.width / 2.f)
                 { // brick hit
-                    srand(static_cast<unsigned>(Game::inst()->delta_time()));
+                    srand(static_cast<unsigned>(Game::inst()->delta_time() * 1e9f));
                     circle_move_direction_ = glm::normalize(circle_.position - player_.position);
-                    circle_move_direction_.y += (2.f * rand() / RAND_MAX - 1.f) / 1e0f;
+                    circle_move_direction_.y += (2.f * rand() / RAND_MAX - 1.f) * 1e-2f;
                     circle_move_direction_ = glm::normalize(circle_move_direction_);
+
+                    player_.width *= 0.99f;
                 }
             }
         }
