@@ -14,6 +14,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "render/render.h"
+#include "render/camera.h"
 #include "render/annotation.h"
 #include "core/game.h"
 #include "render/d3d11_common.h"
@@ -127,6 +128,7 @@ void GLTFModelComponent::load_node(tinygltf::Model* model, tinygltf::Node* input
             const float* position_buffer{ nullptr };
             const float* normals_buffer{ nullptr };
             const float* tex_coords_buffer{ nullptr };
+            const float* color_buffer{ nullptr };
             size_t vertex_count = 0;
 
             for (auto& attribute : primitive.attributes)
@@ -150,7 +152,7 @@ void GLTFModelComponent::load_node(tinygltf::Model* model, tinygltf::Node* input
                 } else if (attribute_name == "tangent") {
                     /// TODO
                 } else if (attribute_name == "color_0") {
-                    
+                    color_buffer = attribute_data;
                 }
             }
 
@@ -158,10 +160,11 @@ void GLTFModelComponent::load_node(tinygltf::Model* model, tinygltf::Node* input
             for (size_t i = 0; i < vertex_count; ++i)
             {
                 Vertex v{};
-                v.pos = glm::make_vec3(&position_buffer[i * 3]);
-                v.normal = glm::normalize(normals_buffer ? glm::make_vec3(&normals_buffer[i * 3]) : glm::vec3(0.f));
-                v.uv = tex_coords_buffer ? glm::make_vec2(&tex_coords_buffer[i * 2]) : glm::vec2(0.f);
-                v.color = glm::vec3(1.f);
+                glm::vec2 uv = tex_coords_buffer ? glm::make_vec2(&tex_coords_buffer[i * 2]) : glm::vec2(0.f);
+                v.pos_uv_x = glm::vec4(glm::make_vec3(&position_buffer[i * 3]), uv.x);
+                v.normal_uv_y = glm::vec4(glm::normalize(normals_buffer ? glm::make_vec3(&normals_buffer[i * 3]) : glm::vec3(0.f)), uv.y);
+                /// TODO: remove this sin cos color
+                v.color = color_buffer ? glm::make_vec4(&color_buffer[i * 4]) : glm::vec4(sinf(vertex_count), cosf(vertex_count), sinf(vertex_count * 1.3), 1.f);
                 vertices_.vertex_buffer_raw.push_back(v);
             }
 
@@ -248,21 +251,14 @@ void GLTFModelComponent::initialize()
 
     D3D11_INPUT_ELEMENT_DESC inputs[] = {
         D3D11_INPUT_ELEMENT_DESC {
-            "POSITION", 0,
-            DXGI_FORMAT_R32G32B32_FLOAT, 0,
+            "POSITION_UV_X", 0,
+            DXGI_FORMAT_R32G32B32A32_FLOAT, 0,
             0,
             D3D11_INPUT_PER_VERTEX_DATA,
             0
         },
         D3D11_INPUT_ELEMENT_DESC {
-            "NORMAL", 0,
-            DXGI_FORMAT_R32G32B32_FLOAT, 0,
-            D3D11_APPEND_ALIGNED_ELEMENT,
-            D3D11_INPUT_PER_VERTEX_DATA,
-            0
-        },
-        D3D11_INPUT_ELEMENT_DESC {
-            "TEXCOORD", 0,
+            "NORMAL_UV_Y", 0,
             DXGI_FORMAT_R32G32B32A32_FLOAT, 0,
             D3D11_APPEND_ALIGNED_ELEMENT,
             D3D11_INPUT_PER_VERTEX_DATA,
@@ -282,7 +278,7 @@ void GLTFModelComponent::initialize()
     shader_.set_name("gltf_shader");
 
     CD3D11_RASTERIZER_DESC rastDesc = {};
-    rastDesc.CullMode = D3D11_CULL_BACK;
+    rastDesc.CullMode = D3D11_CULL_NONE;
     rastDesc.FillMode = D3D11_FILL_SOLID; // D3D11_FILL_WIREFRAME;
 
     auto device = Game::inst()->render().device();
@@ -317,13 +313,16 @@ void GLTFModelComponent::draw()
 
     D3D11_MAPPED_SUBRESOURCE mss;
     context->Map(uniform_buffer_, 0, D3D11_MAP_WRITE_DISCARD, 0, &mss);
-    UniformData data = {
-        model_transform_,
-        Game::inst()->render().camera_view_proj()
-    };
+    const Camera* camera = Game::inst()->render().camera();
+    UniformData data = {};
+    data.model = model_transform_;
+    data.view_proj = camera->view_proj();
+    data.camera_pos = camera->position();
+    data.camera_dir = camera->direction();
     memcpy(mss.pData, &data, sizeof(UniformData));
     context->Unmap(uniform_buffer_, 0);
     context->VSSetConstantBuffers(0, 1, &uniform_buffer_);
+    context->PSSetConstantBuffers(0, 1, &uniform_buffer_);
 
     context->RSSetState(rasterizer_state_);
 

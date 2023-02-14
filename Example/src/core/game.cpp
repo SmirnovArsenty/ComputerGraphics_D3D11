@@ -2,6 +2,7 @@
 #include "win32/win.h"
 #include "render/render.h"
 #include "render/annotation.h"
+#include "render/camera.h"
 #include "components/game_component.h"
 
 Game::Game()
@@ -113,7 +114,8 @@ void Game::toggle_fullscreen()
 
 void Game::mouse_drag(float delta_x, float delta_y)
 {
-    render_->camera_update(delta_x, -delta_y);
+    render_->camera()->pitch(-delta_y);
+    render_->camera()->yaw(delta_x);
 }
 
 const Win& Game::win() const

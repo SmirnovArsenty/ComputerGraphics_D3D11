@@ -49,10 +49,9 @@ private:
 
     // The vertex layout for the samples' model
     struct Vertex {
-        glm::vec3 pos;
-        glm::vec3 normal;
-        glm::vec2 uv;
-        glm::vec3 color;
+        glm::vec4 pos_uv_x;
+        glm::vec4 normal_uv_y;
+        glm::vec4 color;
     };
 
     // Single vertex buffer for all primitives
@@ -125,6 +124,10 @@ private:
     struct UniformData {
         glm::mat4 model;
         glm::mat4 view_proj;
+        glm::vec3 camera_pos;
+        float res_0;
+        glm::vec3 camera_dir;
+        float res_1;
     };
 
     ID3D11Buffer* uniform_buffer_;

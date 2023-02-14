@@ -48,7 +48,7 @@ LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lpa
         }
         case WM_MOUSEMOVE:
         {
-            if (wparam & MK_LBUTTON) // lbutton pressed
+            if (wparam & MK_RBUTTON) // lbutton pressed
             { // drag handle
                 int32_t x = LOWORD(lparam);
                 int32_t y = HIWORD(lparam);
@@ -58,21 +58,15 @@ LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lpa
                     return 0;
                 }
                 float delta_x = float(x - old_x);
-                if (abs(delta_x) > 20) {
-                    delta_x = 0;
-                }
                 float delta_y = float(y - old_y);
-                if (abs(delta_y) > 20) {
-                    delta_y = 0;
-                }
                 Game::inst()->mouse_drag(delta_x, delta_y);
                 old_x = x;
                 old_y = y;
             }
             return 0;
         }
-        case WM_LBUTTONDOWN:
-        case WM_LBUTTONUP:
+        case WM_RBUTTONDOWN:
+        case WM_RBUTTONUP:
         {
             old_x = 0;
             old_y = 0;

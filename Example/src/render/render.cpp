@@ -89,9 +89,9 @@ void Render::initialize()
     depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
     depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS;
 
-    depth_stencil_desc.StencilEnable = true;
-    depth_stencil_desc.StencilReadMask = 0xFF;
-    depth_stencil_desc.StencilWriteMask = 0xFF;
+    depth_stencil_desc.StencilEnable = false;
+    depth_stencil_desc.StencilReadMask = 0;
+    depth_stencil_desc.StencilWriteMask = 0;
 
     // depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
     // depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
@@ -227,21 +227,6 @@ ID3D11DeviceContext* Render::context() const
     return context_.Get();
 }
 
-glm::mat4 Render::camera_view() const
-{
-    return camera_->view();
-}
-
-glm::mat4 Render::camera_proj() const
-{
-    return camera_->proj();
-}
-
-glm::mat4 Render::camera_view_proj() const
-{
-    return camera_->view_proj();
-}
-
 void Render::create_render_target_view()
 {
     destroy_render_target_view();
@@ -249,7 +234,7 @@ void Render::create_render_target_view()
     std::string backbuffer_texture_name = "default_backbuffer";
     backbuffer_texture_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(backbuffer_texture_name.size()), backbuffer_texture_name.c_str());
     D3D11_CHECK(device_->CreateRenderTargetView(backbuffer_texture_, nullptr, &render_target_view_));
-    std::string render_target_view_name = "default_render_target_view";    
+    std::string render_target_view_name = "default_render_target_view";
     render_target_view_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(render_target_view_name.size()), render_target_view_name.c_str());
 }
 
@@ -297,10 +282,9 @@ void Render::destroy_depth_stencil_texture_and_view()
     SAFE_RELEASE(depth_stencil_view_);
 }
 
-void Render::camera_update(float delta_x, float delta_y)
+const Camera* Render::camera() const
 {
-    camera_->pitch(delta_y);
-    camera_->yaw(delta_x);
+    return camera_;
 }
 
 ID3DUserDefinedAnnotation* Render::user_defined_annotation() const

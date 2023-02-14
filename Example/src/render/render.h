@@ -59,12 +59,7 @@ public:
     ID3D11Device* device() const;
     ID3D11DeviceContext* context() const;
 
-    // handle camera
-    void camera_update(float delta_x, float delta_y);
-
-    glm::mat4 camera_view() const;
-    glm::mat4 camera_proj() const;
-    glm::mat4 camera_view_proj() const;
+    const Camera* camera() const;
 
     ID3DUserDefinedAnnotation* user_defined_annotation() const;
 };
