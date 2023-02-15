@@ -41,8 +41,9 @@ void Render::initialize()
     swapDesc.SampleDesc.Count = 1;
     swapDesc.SampleDesc.Quality = 0;
 
-    // choose best adapter by memory
     {
+#if 1
+        // choose best adapter by memory
         Microsoft::WRL::ComPtr<IDXGIFactory> factory;
         D3D11_CHECK(CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&factory));
         int32_t best_adapter_index = 0;
@@ -72,12 +73,22 @@ void Render::initialize()
                                                   featureLevel, 1, D3D11_SDK_VERSION,
                                                   &swapDesc, &swapchain_,
                                                   &device_, nullptr, &context_));
+#else
+        // choose default adapter
+        D3D11_CHECK(D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE,
+                                                  nullptr, D3D11_CREATE_DEVICE_DEBUG,
+                                                  featureLevel, 1, D3D11_SDK_VERSION,
+                                                  &swapDesc, &swapchain_,
+                                                  &device_, nullptr, &context_));
+#endif
 
+#ifndef NDEBUG
         std::string swapchain_name = "default_swapchain";
         swapchain_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(swapchain_name.size()), swapchain_name.c_str());
 
         std::string context_name = "default_context";
         context_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(context_name.size()), context_name.c_str());
+#endif
     }
 
     create_render_target_view();
@@ -93,23 +104,13 @@ void Render::initialize()
     depth_stencil_desc.StencilReadMask = 0;
     depth_stencil_desc.StencilWriteMask = 0;
 
-    // depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    // depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-    // depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    // depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-    // depth_stencil_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    // depth_stencil_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-    // depth_stencil_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    // depth_stencil_desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
     depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+    depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
     depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
     depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
     depth_stencil_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    depth_stencil_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+    depth_stencil_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
     depth_stencil_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
     depth_stencil_desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
@@ -129,13 +130,6 @@ void Render::resize()
     if (!swapchain_) {
         return;
     }
-
-    // static auto last_resize_time = std::chrono::steady_clock::now();
-    // auto actual_time = std::chrono::steady_clock::now();
-
-    // if ((actual_time - last_resize_time).count() / 1e9f < 1) { // less than one second
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    // }
 
     destroy_render_target_view();
     destroy_depth_stencil_texture_and_view();
@@ -199,7 +193,7 @@ void Render::restore_targets()
 
 void Render::end_frame()
 {
-    D3D11_CHECK(swapchain_->Present(1, /*DXGI_PRESENT_DO_NOT_WAIT*/ 0));
+    D3D11_CHECK(swapchain_->Present(1, /* DXGI_PRESENT_DO_NOT_WAIT */ 0));
 }
 
 void Render::destroy_resources()
@@ -229,11 +223,15 @@ void Render::create_render_target_view()
 {
     destroy_render_target_view();
     D3D11_CHECK(swapchain_->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbuffer_texture_));
+#ifndef NDEBUG
     std::string backbuffer_texture_name = "default_backbuffer";
     backbuffer_texture_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(backbuffer_texture_name.size()), backbuffer_texture_name.c_str());
+#endif
     D3D11_CHECK(device_->CreateRenderTargetView(backbuffer_texture_, nullptr, &render_target_view_));
+#ifndef NDEBUG
     std::string render_target_view_name = "default_render_target_view";
     render_target_view_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(render_target_view_name.size()), render_target_view_name.c_str());
+#endif
 }
 
 void Render::destroy_render_target_view()
@@ -250,28 +248,19 @@ void Render::create_depth_stencil_texture_and_view()
     GetWindowRect(Game::inst()->win().get_window(), &rc);
     D3D11_TEXTURE2D_DESC depth_texture_desc;
     backbuffer_texture_->GetDesc(&depth_texture_desc);
-    // depth_texture_desc.Width = rc.right - rc.left;
-    // depth_texture_desc.Height = rc.bottom - rc.top;
-    // depth_texture_desc.MipLevels = 1;
-    // depth_texture_desc.ArraySize = 1;
     depth_texture_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-    // depth_texture_desc.SampleDesc.Count = 1;
-    // depth_texture_desc.SampleDesc.Quality = 0;
-    // depth_texture_desc.Usage = D3D11_USAGE_DEFAULT;
     depth_texture_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-    // depth_texture_desc.CPUAccessFlags = 0;
-    // depth_texture_desc.MiscFlags = 0;
     D3D11_CHECK(device_->CreateTexture2D(&depth_texture_desc, nullptr, &depth_stencil_texture_));
+#ifndef NDEBUG
     std::string depth_stencil_texture_name = "default_depth_stencil_texture";
     depth_stencil_texture_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(depth_stencil_texture_name.size()), depth_stencil_texture_name.c_str());
+#endif
 
-    // D3D11_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc = {};
-    // depth_stencil_view_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-    // depth_stencil_view_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-    // depth_stencil_view_desc.Texture2D.MipSlice = 0;
-    std::string depth_stencil_view_name = "default_depth_stencil_view";
     D3D11_CHECK(device_->CreateDepthStencilView(depth_stencil_texture_, nullptr, &depth_stencil_view_));
+#ifndef NDEBUG
+    std::string depth_stencil_view_name = "default_depth_stencil_view";
     depth_stencil_view_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(depth_stencil_view_name.size()), depth_stencil_view_name.c_str());
+#endif
 }
 
 void Render::destroy_depth_stencil_texture_and_view()

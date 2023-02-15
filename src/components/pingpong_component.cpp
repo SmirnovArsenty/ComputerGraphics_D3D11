@@ -27,13 +27,24 @@ void PingpongComponent::initialize()
     brick_shader_.set_vs_shader_from_memory(brick_shader_source_, "VSMain", nullptr, nullptr);
     brick_shader_.set_ps_shader_from_memory(brick_shader_source_, "PSMain", nullptr, nullptr);
 
+#ifndef NDEBUG
+    brick_shader_.set_name("brick_shader");
+#endif
+
     circle_shader_.set_vs_shader_from_memory(circle_shader_source_, "VSMain", nullptr, nullptr);
     circle_shader_.set_ps_shader_from_memory(circle_shader_source_, "PSMain", nullptr, nullptr);
+#ifndef NDEBUG
+    circle_shader_.set_name("circle_shader");
+#endif
 
     // input layout is not required: only index buffer used
 
     std::vector<uint16_t> brick_index_data = { 0,1,2, 0,1,3 };
     brick_index_buffer_.initialize(D3D11_BIND_INDEX_BUFFER, brick_index_data.data(), sizeof(brick_index_data[0]), UINT(std::size(brick_index_data)));
+
+#ifndef NDEBUG
+    brick_index_buffer_.set_name("brick_index_buffer");
+#endif
 
     std::vector<uint16_t> circle_index_data; // = { 0,1,2, 0,2,3 };
     for (uint16_t i = 0; i < circle_.triangle_count; ++i)
@@ -45,9 +56,19 @@ void PingpongComponent::initialize()
     circle_index_data.back() = 1; // link with first triangle
     circle_index_buffer_.initialize(D3D11_BIND_INDEX_BUFFER, circle_index_data.data(), sizeof(circle_index_data[0]), UINT(std::size(circle_index_data)));
 
+#ifndef NDEBUG
+    circle_index_buffer_.set_name("circle_index_buffer");
+#endif
+
     player_brick_info_buffer_.initialize(sizeof(BrickInfo), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
     opponent_brick_info_buffer_.initialize(sizeof(BrickInfo), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
     circle_info_buffer_.initialize(sizeof(CircleInfo), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+
+#ifndef NDEBUG
+    player_brick_info_buffer_.set_name("player_uniform_buffer");
+    opponent_brick_info_buffer_.set_name("opponent_uniform_buffer");
+    circle_info_buffer_.set_name("circle_uniform_buffer");
+#endif
 
     CD3D11_RASTERIZER_DESC rastDesc = {};
     rastDesc.CullMode = D3D11_CULL_NONE;
@@ -55,6 +76,11 @@ void PingpongComponent::initialize()
 
     auto device = Game::inst()->render().device();
     D3D11_CHECK(device->CreateRasterizerState(&rastDesc, &rasterizer_state_));
+
+#ifndef NDEBUG
+    std::string rasterizer_state_name = "pingpong_rasterizer_state";
+    rasterizer_state_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(rasterizer_state_name.size()), rasterizer_state_name.c_str());
+#endif
 }
 
 void PingpongComponent::draw()

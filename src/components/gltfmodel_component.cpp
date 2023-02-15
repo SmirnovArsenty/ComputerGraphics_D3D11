@@ -241,8 +241,10 @@ void GLTFModelComponent::initialize()
 
     vertices_.buffer.initialize(D3D11_BIND_VERTEX_BUFFER, vertices_.vertex_buffer_raw.data(), sizeof(vertices_.vertex_buffer_raw[0]), static_cast<UINT>(vertices_.vertex_buffer_raw.size()));
     indices_.buffer.initialize(D3D11_BIND_INDEX_BUFFER, indices_.index_buffer_raw.data(), sizeof(indices_.index_buffer_raw[0]), static_cast<UINT>(indices_.index_buffer_raw.size()));
+#ifndef NDEBUG
     vertices_.buffer.set_name("gltf_vertex_buffer");
     indices_.buffer.set_name("gltf_index_buffer");
+#endif
 
     shader_.set_vs_shader_from_memory(shader_source_, "VSMain", nullptr, nullptr);
     shader_.set_ps_shader_from_memory(shader_source_, "PSMain", nullptr, nullptr);
@@ -255,7 +257,9 @@ void GLTFModelComponent::initialize()
 
     shader_.set_input_layout(inputs, std::size(inputs));
 
+#ifndef NDEBUG
     shader_.set_name("gltf_shader");
+#endif
 
     CD3D11_RASTERIZER_DESC rastDesc = {};
     rastDesc.CullMode = D3D11_CULL_NONE;
@@ -264,8 +268,15 @@ void GLTFModelComponent::initialize()
     auto device = Game::inst()->render().device();
     D3D11_CHECK(device->CreateRasterizerState(&rastDesc, &rasterizer_state_));
 
+#ifndef NDEBUG
+    std::string rasterizer_state_name = "gltf_rasterizer_state";
+    rasterizer_state_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(rasterizer_state_name.size()), rasterizer_state_name.c_str());
+#endif
+
     uniform_buffer_.initialize(sizeof(UniformData), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+#ifndef NDEBUG
     uniform_buffer_.set_name("gltf_uniform_buffer");
+#endif
 }
 
 void GLTFModelComponent::draw()

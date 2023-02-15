@@ -18,7 +18,9 @@ void Shader::set_name(const std::string& name)
     pixel_shader_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(ps_name.size()), ps_name.c_str());
 
     std::string il_name = name + "_input_layout";
-    input_layout_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(il_name.size()), il_name.c_str());
+    if (input_layout_ != nullptr) {
+        input_layout_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(il_name.size()), il_name.c_str());
+    }
 }
 
 void Shader::set_vs_shader_from_file(const std::string& filename,

@@ -13,7 +13,7 @@ private:
     ID3D11PixelShader* pixel_shader_{ nullptr };
     ID3DBlob* pixel_bc_{ nullptr };
 
-    ID3D11InputLayout* input_layout_{ nullptr };
+    ID3D11InputLayout* input_layout_{ nullptr }; // optional
 public:
     Shader();
     ~Shader();

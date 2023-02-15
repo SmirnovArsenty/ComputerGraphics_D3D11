@@ -18,6 +18,9 @@ void TriangleComponent::initialize()
         { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
     shader_.set_input_layout(inputs, std::size(inputs));
+#ifndef NDEBUG
+    shader_.set_name("triangle_shader");
+#endif
 
     // create buffers
     auto device = Game::inst()->render().device();
@@ -28,15 +31,26 @@ void TriangleComponent::initialize()
     };
 
     vertex_buffer_.initialize(D3D11_BIND_VERTEX_BUFFER, points, sizeof(glm::vec4) * 2, 3);
+#ifndef NDEBUG
+    vertex_buffer_.set_name("triangle_vertex_buffer");
+#endif
 
     std::vector<uint16_t> index_data = { 0, 1, 2 };
     index_buffer_.initialize(D3D11_BIND_INDEX_BUFFER, index_data.data(), sizeof(index_data[0]), UINT(std::size(index_data)));
+#ifndef NDEBUG
+    index_buffer_.set_name("triangle_index_buffer");
+#endif
 
     CD3D11_RASTERIZER_DESC rastDesc = {};
     rastDesc.CullMode = D3D11_CULL_NONE;
     rastDesc.FillMode = D3D11_FILL_SOLID; // D3D11_FILL_WIREFRAME;
 
     D3D11_CHECK(device->CreateRasterizerState(&rastDesc, &rasterizer_state_));
+
+#ifndef NDEBUG
+    std::string rasterizer_state_name = "triangle_rasterizer_state";
+    rasterizer_state_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(rasterizer_state_name.size()), rasterizer_state_name.c_str());
+#endif
 
     // D3D11_BUFFER_DESC vertexBufDesc = {};
     // vertexBufDesc.Usage = D3D11_USAGE_DEFAULT;
