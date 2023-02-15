@@ -1,6 +1,6 @@
 #pragma once
 
-#include "components/common/game_component.h"
+#include "component/game_component.h"
 #include "render/resource/shader.h"
 #include "render/resource/buffer.h"
 

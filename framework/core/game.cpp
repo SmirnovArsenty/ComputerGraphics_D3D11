@@ -4,7 +4,7 @@
 #include "render/render.h"
 #include "render/annotation.h"
 #include "render/camera.h"
-#include "components/common/game_component.h"
+#include "component/game_component.h"
 
 Game::Game()
 {

@@ -6,7 +6,6 @@
 #include <string>
 #include "win.h"
 #include "core/game.h"
-#include "components/common/game_component_decl.h"
 
 // static
 LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lparam)
