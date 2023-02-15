@@ -244,10 +244,8 @@ void GLTFModelComponent::initialize()
     vertices_.buffer.set_name("gltf_vertex_buffer");
     indices_.buffer.set_name("gltf_index_buffer");
 
-    shader_.set_vs_shader_from_file((std::string(resource_path_) + "shaders/shader.hlsl").c_str(),
-                                    "VSMain", nullptr, nullptr);
-    shader_.set_ps_shader_from_file((std::string(resource_path_) + "shaders/shader.hlsl").c_str(),
-                                    "PSMain", nullptr, nullptr);
+    shader_.set_vs_shader_from_memory(shader_source_, "VSMain", nullptr, nullptr);
+    shader_.set_ps_shader_from_memory(shader_source_, "PSMain", nullptr, nullptr);
 
     D3D11_INPUT_ELEMENT_DESC inputs[] = {
         { "POSITION_UV_X", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },

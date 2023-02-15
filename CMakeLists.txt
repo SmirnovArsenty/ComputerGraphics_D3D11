@@ -10,10 +10,17 @@ add_subdirectory(framework)
 set(group_component_triangle
     src/components/triangle_component.cpp
     src/components/triangle_component.h
-
+)
+set(group_component_triangle_main
     src/triangle_main.cpp
 )
-add_executable(triangle WIN32 ${group_component_triangle})
+set(triangle_sources
+    ${group_component_triangle}
+    ${group_component_triangle_main}
+)
+source_group("" FILES ${group_component_triangle_main})
+source_group("component" FILES ${group_component_triangle})
+add_executable(triangle WIN32 ${triangle_sources})
 target_include_directories(triangle
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/framework)
@@ -28,10 +35,17 @@ add_custom_command(TARGET triangle POST_BUILD
 set(group_component_gltf
     src/components/gltfmodel_component.cpp
     src/components/gltfmodel_component.h
-
+)
+set(group_component_gltf_main
     src/gltf_main.cpp
 )
-add_executable(gltf WIN32 ${group_component_gltf})
+set(gltf_sources
+    ${group_component_gltf}
+    ${group_component_gltf_main}
+)
+source_group("" FILES ${group_component_gltf_main})
+source_group("component" FILES ${group_component_gltf})
+add_executable(gltf WIN32 ${gltf_sources})
 target_include_directories(gltf
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/framework)
@@ -46,10 +60,17 @@ add_custom_command(TARGET gltf POST_BUILD
 set(group_component_pingpong
     src/components/pingpong_component.cpp
     src/components/pingpong_component.h
-
+)
+set(group_component_pingpong_main
     src/pingpong_main.cpp
 )
-add_executable(pingpong WIN32 ${group_component_pingpong})
+set(pingpong_sources
+    ${group_component_pingpong}
+    ${group_component_pingpong_main}
+)
+source_group("" FILES ${group_component_pingpong_main})
+source_group("component" FILES ${group_component_pingpong})
+add_executable(pingpong WIN32 ${pingpong_sources})
 target_include_directories(pingpong
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/framework)
