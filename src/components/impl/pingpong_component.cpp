@@ -24,15 +24,12 @@ PingpongComponent::PingpongComponent()
 void PingpongComponent::initialize()
 {
     // setup shaders
-    brick_shader_.set_vs_shader((std::string(resource_path_) + "shaders/brick.hlsl").c_str(),
-                                "VSMain", nullptr, nullptr);
-    brick_shader_.set_ps_shader((std::string(resource_path_) + "shaders/brick.hlsl").c_str(),
-                                "PSMain", nullptr, nullptr);
+    brick_shader_.set_vs_shader_from_memory(brick_shader_source_, "VSMain", nullptr, nullptr);
+    brick_shader_.set_ps_shader_from_memory(brick_shader_source_, "PSMain", nullptr, nullptr);
 
-    circle_shader_.set_vs_shader((std::string(resource_path_) + "shaders/circle.hlsl").c_str(),
-                                 "VSMain", nullptr, nullptr);
-    circle_shader_.set_ps_shader((std::string(resource_path_) + "shaders/circle.hlsl").c_str(),
-                                 "PSMain", nullptr, nullptr);
+    circle_shader_.set_vs_shader_from_memory(circle_shader_source_, "VSMain", nullptr, nullptr);
+    circle_shader_.set_ps_shader_from_memory(circle_shader_source_, "PSMain", nullptr, nullptr);
+
     // input layout is not required: only index buffer used
 
     std::vector<uint16_t> brick_index_data = { 0,1,2, 0,1,3 };
@@ -152,7 +149,7 @@ void PingpongComponent::update()
         {
             if (circle_move_direction_.x > 0) // move to AI
             {
-                if (circle_.position.x > opponent_.position.x)
+                if (circle_.position.x > opponent_.position.x + opponent_.height / 2)
                 {
                     MessageBox(NULL, "You won!", "Winner!", MB_OK | MB_ICONEXCLAMATION);
                     Game::inst()->set_destroy();
@@ -162,18 +159,18 @@ void PingpongComponent::update()
                     circle_.position.y - circle_.radius > opponent_.position.y - opponent_.width / 2.f)
                 { // brick hit
                     // reflect circle
+                    circle_move_direction_.x *= -1.f;
                     srand(static_cast<unsigned>(Game::inst()->delta_time() * 1e9f));
-                    circle_move_direction_ = glm::normalize(circle_.position - opponent_.position);
-                    circle_move_direction_.y += (2.f * rand() / RAND_MAX - 1.f) * 1e-2f;
+                    circle_move_direction_.y = (2.f * rand() / RAND_MAX - 1.f) * .5f;
                     circle_move_direction_ = glm::normalize(circle_move_direction_);
 
-                    // TODO: reduce size by every hit
-                    opponent_.width *= 0.99f;
+                    // reduce size by every hit
+                    opponent_.width *= 0.95f;
                 }
             }
             else // move to player
             {
-                if (circle_.position.x < player_.position.x)
+                if (circle_.position.x < player_.position.x - player_.height / 2)
                 {
                     MessageBox(NULL, "You lose!", "Loser!", MB_OK | MB_ICONEXCLAMATION);
                     Game::inst()->set_destroy();
@@ -182,12 +179,12 @@ void PingpongComponent::update()
                     circle_.position.y + circle_.radius < player_.position.y + player_.width / 2.f &&
                     circle_.position.y - circle_.radius > player_.position.y - player_.width / 2.f)
                 { // brick hit
+                    circle_move_direction_.x *= -1.f;
                     srand(static_cast<unsigned>(Game::inst()->delta_time() * 1e9f));
-                    circle_move_direction_ = glm::normalize(circle_.position - player_.position);
-                    circle_move_direction_.y += (2.f * rand() / RAND_MAX - 1.f) * 1e-2f;
+                    circle_move_direction_.y = (2.f * rand() / RAND_MAX - 1.f) * .5f;
                     circle_move_direction_ = glm::normalize(circle_move_direction_);
 
-                    player_.width *= 0.99f;
+                    player_.width *= 0.95f;
                 }
             }
         }
@@ -219,3 +216,94 @@ void PingpongComponent::destroy_resources()
     brick_shader_.destroy();
     circle_shader_.destroy();
 }
+
+std::string PingpongComponent::brick_shader_source_ = {
+R"(struct VS_IN
+{
+    uint index : SV_VertexID;
+};
+
+struct PS_IN
+{
+    float4 pos : SV_POSITION;
+};
+
+cbuffer BrickInfo : register(b0)
+{
+    float2 position;
+    float width;
+    float height;
+};
+
+PS_IN VSMain( VS_IN input )
+{
+    PS_IN output = (PS_IN)0;
+
+    float half_width = width / 2;
+    float half_height = height / 2;
+    if (input.index == 0) {
+        output.pos = float4(position.x + half_height, position.y + half_width, .5f, 1.f);
+    }
+    if (input.index == 1) {
+        output.pos = float4(position.x - half_height, position.y - half_width, .5f, 1.f);
+    }
+    if (input.index == 2) {
+        output.pos = float4(position.x + half_height, position.y - half_width, .5f, 1.f);
+    }
+    if (input.index == 3) {
+        output.pos = float4(position.x - half_height, position.y + half_width, .5f, 1.f);
+    }
+
+    return output;
+}
+
+float4 PSMain( PS_IN input ) : SV_Target
+{
+    return (1.f).xxxx;
+}
+)"};
+
+std::string PingpongComponent::circle_shader_source_{
+R"(struct VS_IN
+{
+    uint index : SV_VertexID;
+};
+
+struct PS_IN
+{
+    float4 pos : SV_POSITION;
+};
+
+cbuffer CircleInfo : register(b0)
+{
+    float2 position;
+    float radius;
+    uint triangle_count;
+};
+
+PS_IN VSMain( VS_IN input )
+{
+    PS_IN output = (PS_IN)0;
+
+    // setup out pos by index
+    if (input.index == 0)
+    {
+        output.pos = float4(position.xy, .5f, 1.f);
+    }
+    else
+    {
+        static const float PI = 3.14159265f;
+        float angle = 2 * PI / triangle_count;
+        float x_pos = position.x + radius * cos(angle * input.index);
+        float y_pos = position.y + radius * sin(angle * input.index);
+        output.pos = float4(x_pos, y_pos, .5f, 1.f);
+    }
+
+    return output;
+}
+
+float4 PSMain( PS_IN input ) : SV_Target
+{
+    return (1.f).xxxx;
+}
+)"};

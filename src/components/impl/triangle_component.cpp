@@ -10,35 +10,14 @@ TriangleComponent::~TriangleComponent() {}
 
 void TriangleComponent::initialize()
 {
-    shader_.set_vs_shader((std::string(resource_path_) + "shaders/shader.hlsl").c_str(),
-                          "VSMain", nullptr, nullptr);
-    // D3D_SHADER_MACRO pixel_shader_macros[] = {
-    //     "TEST", "1",
-    //     "TCOLOR", "float4(0.0f, 1.0f, 0.0f, 1.0f)",
-    //     nullptr, nullptr
-    // };
-    shader_.set_ps_shader((std::string(resource_path_) + "shaders/shader.hlsl").c_str(),
-                          "PSMain", nullptr /* pixel_shader_macros */, nullptr);
+    shader_.set_vs_shader_from_memory(shader_source_, "VSMain", nullptr, nullptr);
+    shader_.set_ps_shader_from_memory(shader_source_, "PSMain", nullptr, nullptr);
 
     D3D11_INPUT_ELEMENT_DESC inputs[] = {
-        D3D11_INPUT_ELEMENT_DESC {
-            "POSITION",
-            0,
-            DXGI_FORMAT_R32G32B32A32_FLOAT,
-            0,
-            0,
-            D3D11_INPUT_PER_VERTEX_DATA,
-            0},
-        D3D11_INPUT_ELEMENT_DESC {
-            "COLOR",
-            0,
-            DXGI_FORMAT_R32G32B32A32_FLOAT,
-            0,
-            D3D11_APPEND_ALIGNED_ELEMENT, // 32 // sizeof(DirectX::XMFLOAT4)
-            D3D11_INPUT_PER_VERTEX_DATA,
-            0}
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
-    shader_.set_input_layout(inputs, 2);
+    shader_.set_input_layout(inputs, std::size(inputs));
 
     // create buffers
     auto device = Game::inst()->render().device();
@@ -128,3 +107,33 @@ void TriangleComponent::destroy_resources()
 
     SAFE_RELEASE(rasterizer_state_);
 }
+
+std::string TriangleComponent::shader_source_{
+R"(struct VS_IN
+{
+    float4 pos : POSITION0;
+    float4 col : COLOR0;
+};
+
+struct PS_IN
+{
+    float4 pos : SV_POSITION;
+    float4 col : COLOR;
+};
+
+PS_IN VSMain( VS_IN input )
+{
+    PS_IN output = (PS_IN)0;
+
+    output.pos = input.pos;
+    output.col = input.col;
+    
+    return output;
+}
+
+float4 PSMain( PS_IN input ) : SV_Target
+{
+    float4 col = input.col;
+    return col;
+}
+)"};

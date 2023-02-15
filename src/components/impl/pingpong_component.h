@@ -9,7 +9,8 @@
 class PingpongComponent : public GameComponent
 {
 private:
-    constexpr static char* resource_path_{ "./resources/pingpong_component/" };
+    static std::string brick_shader_source_;
+    static std::string circle_shader_source_;
 
     struct BrickInfo
     {

@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include <wrl.h>
 #include <string>
+#include <vector>
 
 class Shader
 {
@@ -19,14 +20,21 @@ public:
 
     void set_name(const std::string& name);
 
-    void set_vs_shader(const std::string& filename,
-                       const std::string& vs_entrypoint,
-                       D3D_SHADER_MACRO*, ID3DInclude*);
-    void set_ps_shader(const std::string& filename,
-                       const std::string& ps_entrypoint,
-                       D3D_SHADER_MACRO*, ID3DInclude*);
+    void set_vs_shader_from_file(const std::string& filename,
+                                 const std::string& entrypoint,
+                                 D3D_SHADER_MACRO*, ID3DInclude*);
+    void set_ps_shader_from_file(const std::string& filename,
+                                 const std::string& entrypoint,
+                                 D3D_SHADER_MACRO*, ID3DInclude*);
 
-    void set_input_layout(D3D11_INPUT_ELEMENT_DESC*, uint32_t);
+    void set_vs_shader_from_memory(const std::string& data,
+                                   const std::string& entrypoint,
+                                   D3D_SHADER_MACRO*, ID3DInclude*);
+    void set_ps_shader_from_memory(const std::string& data,
+                                   const std::string& entrypoint,
+                                   D3D_SHADER_MACRO*, ID3DInclude*);
+
+    void set_input_layout(D3D11_INPUT_ELEMENT_DESC*, size_t);
 
     void use();
 

@@ -7,7 +7,7 @@
 class TriangleComponent : public GameComponent
 {
 private:
-    constexpr static char* resource_path_{ "./resources/triangle_component/" };
+    static std::string shader_source_;
 
     Shader shader_;
 

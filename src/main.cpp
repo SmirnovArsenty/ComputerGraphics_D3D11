@@ -11,10 +11,10 @@
 
 int WinMain(HINSTANCE, HINSTANCE, char*, int)
 {
-    // auto sponza = std::make_unique<GLTFModelComponent>("models/Sponza/Sponza.gltf");
+    auto sponza = std::make_unique<GLTFModelComponent>("models/Sponza/Sponza.gltf");
     // Game::inst()->add_component(sponza.get());
 
-    // auto traingle = std::make_unique<TriangleComponent>();
+    auto traingle = std::make_unique<TriangleComponent>();
     // Game::inst()->add_component(traingle.get());
 
     auto pingpong = std::make_unique<PingpongComponent>();
