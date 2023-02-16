@@ -3,6 +3,7 @@
 #include "render.h"
 #include "core/game.h"
 #include "win32/win.h"
+#include "win32/input.h"
 #include "d3d11_common.h"
 #include "resource/shader.h"
 #include "camera.h"
@@ -119,7 +120,7 @@ void Render::initialize()
     create_depth_stencil_texture_and_view();
 
     camera_ = new Camera();
-    // camera_->set_camera(glm::vec3(100.f), glm::vec3(0.f));
+    // camera_->set_camera(Vector3(100.f), Vector3(0.f));
 
     // initialize debug annotations
     context_->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), reinterpret_cast<void**>(&user_defined_annotation_));
@@ -174,6 +175,34 @@ void Render::prepare_frame()
     viewport.MaxDepth = 1.0f;
 
     context_->RSSetViewports(1, &viewport);
+
+    { // move camera
+        float camera_move_delta = Game::inst()->delta_time() * 1e2f;
+        const auto& keyboard = Game::inst()->win().input()->keyboard();
+
+        if (keyboard.shift.pressed) {
+            camera_move_delta *= 1e1f;
+        }
+        camera_->move_forward(camera_move_delta * keyboard.w.pressed);
+        camera_->move_right(camera_move_delta * keyboard.d.pressed);
+        camera_->move_forward(-camera_move_delta * keyboard.s.pressed);
+        camera_->move_right(-camera_move_delta * keyboard.a.pressed);
+        camera_->move_up(camera_move_delta * keyboard.space.pressed);
+        camera_->move_up(-camera_move_delta * keyboard.c.pressed);
+    }
+    { // rotate camera
+        const float camera_rotate_delta = Game::inst()->delta_time() / 1e1f;
+        const auto& mouse = Game::inst()->win().input()->mouse();
+        if (mouse.rbutton.pressed)
+        { // camera rotation with right button pressed
+            if (mouse.delta_y != 0.f) {
+                camera_->pitch(-mouse.delta_y * camera_rotate_delta); // negate to convert from Win32 coordinates
+            }
+            if (mouse.delta_x != 0.f) {
+                camera_->yaw(mouse.delta_x * camera_rotate_delta);
+            }
+        }
+    }
 }
 
 void Render::prepare_resources()

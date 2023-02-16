@@ -65,7 +65,7 @@ source_group("win32" FILES ${group_win32})
 add_library(framework STATIC ${sources})
 target_link_libraries(framework
     tinygltf
-    glm
+    directxtk
 )
 target_include_directories(framework
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/

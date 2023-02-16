@@ -8,19 +8,19 @@
 PingpongComponent::PingpongComponent()
 {
     // setup game data
-    default_player_.position = glm::vec2(-1.f + 0.02f, .0f);
+    default_player_.position = Vector2(-1.f + 0.02f, .0f);
     default_player_.width = 0.3f;
     default_player_.height = 0.02f;
 
-    default_opponent_.position = glm::vec2(1.f - 0.02f, .0f);
+    default_opponent_.position = Vector2(1.f - 0.02f, .0f);
     default_opponent_.width = 0.3f;
     default_opponent_.height = 0.02f;
 
     default_circle_.triangle_count = 10;
-    default_circle_.position = glm::vec2(0.f, 0.f);
+    default_circle_.position = Vector2(0.f, 0.f);
     default_circle_.radius = 0.02f;
 
-    default_circle_move_direction_ = glm::vec2(1.f, 0.f); // initially moves to opponent
+    default_circle_move_direction_ = Vector2(1.f, 0.f); // initially moves to opponent
 }
 
 void PingpongComponent::initialize()
@@ -277,7 +277,7 @@ void PingpongComponent::update()
                     circle_move_direction_.x *= -1.f;
                     srand(static_cast<unsigned>(Game::inst()->delta_time() * 1e9f));
                     circle_move_direction_.y = (2.f * rand() / RAND_MAX - 1.f) * .5f;
-                    circle_move_direction_ = glm::normalize(circle_move_direction_);
+                    circle_move_direction_.Normalize();
 
                     // reduce size by every hit
                     opponent_.width *= 0.95f;
@@ -301,7 +301,7 @@ void PingpongComponent::update()
                     circle_move_direction_.x *= -1.f;
                     srand(static_cast<unsigned>(Game::inst()->delta_time() * 1e9f));
                     circle_move_direction_.y = (2.f * rand() / RAND_MAX - 1.f) * .5f;
-                    circle_move_direction_ = glm::normalize(circle_move_direction_);
+                    circle_move_direction_.Normalize();
 
                     player_.width *= 0.95f;
                     if (player_.width < 0.04f) {

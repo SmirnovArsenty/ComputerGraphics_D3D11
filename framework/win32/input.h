@@ -13,9 +13,13 @@ public:
         float delta_y = 0.f;
         float delta_z = 0.f; // scroll
 
-        bool lbutton = false;
-        bool mbutton = false;
-        bool rbutton = false;
+        struct MouseButtonState {
+            bool pressed = false;
+            bool released = false;
+        };
+        MouseButtonState lbutton;
+        MouseButtonState mbutton;
+        MouseButtonState rbutton;
     };
 
 #define FOR_EACH_BUTTON(FUNC)   \
@@ -69,26 +73,9 @@ public:
 #undef BUTTON_DECL
     };
 
-    struct InputEvent
-    {
-    public:
-        enum class InputEventType : uint32_t
-        {
-            undefined = 0u,
-            MOUSE,
-            KEYBOARD,
-        } type{ InputEventType::undefined };
-
-        union
-        {
-            MouseState mouse;
-            struct {
-                uint32_t key_code{ 0 };
-                KeyboardState::ButtonState state;
-            } keyboard;
-        };
-
-        InputEvent() = default;
+    struct KeyboardEvent {
+        uint32_t key_code{ 0 };
+        KeyboardState::ButtonState state;
     };
 
     Input(HWND hWnd);
@@ -105,6 +92,6 @@ private:
     MouseState mouse_state_;
     KeyboardState keyboard_state_;
 
-    std::queue<InputEvent> event_queue_;
-
+    std::queue<KeyboardEvent> keyboard_event_queue_;
+    std::queue<MouseState> mouse_event_queue_;
 };

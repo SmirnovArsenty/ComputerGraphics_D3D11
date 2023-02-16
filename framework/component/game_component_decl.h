@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
-#include <glm/glm.hpp>
-#include <directxmath.h>
+#include <SimpleMath.h>
+using namespace DirectX::SimpleMath;
 
 #include "game_component.h"
 #include "render/resource/shader.h"

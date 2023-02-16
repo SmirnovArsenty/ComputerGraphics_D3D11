@@ -9,10 +9,6 @@
 #define TINYGLTF_NO_EXTERNAL_IMAGE
 #include <tiny_gltf.h>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include "render/render.h"
 #include "render/camera.h"
 #include "render/annotation.h"
@@ -20,15 +16,13 @@
 #include "render/d3d11_common.h"
 #include "gltfmodel_component.h"
 
-GLTFModelComponent::GLTFModelComponent(const std::string& filename, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale) : gltf_filename_{ filename }
+GLTFModelComponent::GLTFModelComponent(const std::string& filename, Vector3 position, Quaternion rotation, Vector3 scale) : gltf_filename_{ filename }
 {
     // must not be found
     assert(gltf_filename_.find(resource_path_) == std::string::npos);
 
     // initalize model transform matrix
-    (void)scale; // unused
-    model_transform_ = glm::identity<glm::mat4>();
-    model_transform_ = glm::translate(model_transform_, position) * glm::scale(model_transform_, scale);
+    model_transform_ = Matrix{}.CreateFromQuaternion(rotation) * Matrix{}.CreateScale(scale) * Matrix{}.CreateTranslation(position);
 }
 
 GLTFModelComponent::~GLTFModelComponent()
@@ -84,21 +78,33 @@ void GLTFModelComponent::load_node(tinygltf::Model* model, tinygltf::Node* input
 {
     nodes_.push_back(GLTFModelComponent::Node{});
     auto& new_node = nodes_.back();
-    new_node.matrix = glm::mat4(1.f);
+    new_node.matrix = Matrix::Identity;
     new_node.parent = parent;
 
     if (input_node->translation.size() == 3) {
-        new_node.matrix = glm::translate(new_node.matrix, glm::vec3(glm::make_vec3(input_node->translation.data())));
+        Matrix new_node_matrix;
+        new_node.matrix = Matrix{}.CreateTranslation(float(input_node->translation.data()[0]),
+                                                     float(input_node->translation.data()[1]),
+                                                     float(input_node->translation.data()[2]));
     }
     if (input_node->rotation.size() == 4) {
-        glm::quat q = glm::make_quat(input_node->rotation.data());
-        new_node.matrix *= glm::mat4(q);
+        Quaternion q{ float(input_node->rotation.data()[0]),
+                      float(input_node->rotation.data()[1]),
+                      float(input_node->rotation.data()[2]),
+                      float(input_node->rotation.data()[3])
+        };
+        new_node.matrix *= Matrix{}.CreateFromQuaternion(q);
     }
     if (input_node->scale.size() == 3) {
-        new_node.matrix *= glm::scale(new_node.matrix, glm::vec3(glm::make_vec3(input_node->scale.data())));
+        new_node.matrix *= Matrix{}.CreateScale(float(input_node->scale.data()[0]),
+                                                float(input_node->scale.data()[1]),
+                                                float(input_node->scale.data()[2]));
     }
     if (input_node->matrix.size() == 16) {
-        new_node.matrix = glm::make_mat4x4(input_node->matrix.data());
+        new_node.matrix = Matrix(float(input_node->matrix.data()[0]), float(input_node->matrix.data()[1]), float(input_node->matrix.data()[2]), float(input_node->matrix.data()[3]),
+                                 float(input_node->matrix.data()[4]), float(input_node->matrix.data()[5]), float(input_node->matrix.data()[6]), float(input_node->matrix.data()[7]),
+                                 float(input_node->matrix.data()[8]), float(input_node->matrix.data()[9]), float(input_node->matrix.data()[10]), float(input_node->matrix.data()[11]),
+                                 float(input_node->matrix.data()[12]), float(input_node->matrix.data()[13]), float(input_node->matrix.data()[14]), float(input_node->matrix.data()[15]));
     }
 
     for (auto& child : input_node->children)
@@ -160,11 +166,12 @@ void GLTFModelComponent::load_node(tinygltf::Model* model, tinygltf::Node* input
             for (size_t i = 0; i < vertex_count; ++i)
             {
                 Vertex v{};
-                glm::vec2 uv = tex_coords_buffer ? glm::make_vec2(&tex_coords_buffer[i * 2]) : glm::vec2(0.f);
-                v.pos_uv_x = glm::vec4(glm::make_vec3(&position_buffer[i * 3]), uv.x);
-                v.normal_uv_y = glm::vec4(glm::normalize(normals_buffer ? glm::make_vec3(&normals_buffer[i * 3]) : glm::vec3(0.f)), uv.y);
-                /// TODO: remove this sin cos color
-                v.color = glm::vec4(1.f); // color_buffer ? glm::make_vec4(&color_buffer[i * 4]) : glm::vec4(sinf(vertex_count), cosf(vertex_count), sinf(vertex_count * 1.3), 1.f);
+                Vector3 pos = Vector3(&position_buffer[i * 3]);
+                Vector3 normal = (normals_buffer ? Vector3(&normals_buffer[i * 3]) : Vector3(0.f));
+                Vector2 uv = tex_coords_buffer ? Vector2(&tex_coords_buffer[i * 2]) : Vector2(0.f);
+                v.pos_uv_x = Vector4(pos.x, pos.y, pos.z, uv.x);
+                v.normal_uv_y = Vector4(normal.x, normal.y, normal.z, uv.y);
+                v.color = Vector4(1.f);
                 vertices_.vertex_buffer_raw.push_back(v);
             }
 
@@ -368,7 +375,7 @@ PS_IN VSMain( VS_IN input )
     float4 model_pos = mul(float4(input.pos.xyz, 1.f), model_transform);
     float3 model_normal = normalize(mul(input.normal.xyz, (float3x3)model_transform));
 
-    output.pos = mul(model_pos, view_proj);
+    output.pos = mul(view_proj, model_pos);
     output.real_pos = model_pos.xyz / model_pos.w;
     output.col = input.col;
     output.normal = model_normal;
@@ -383,6 +390,9 @@ PS_OUT PSMain( PS_IN input ) : SV_Target
 
     float3 model_pos = input.real_pos;
     float3 model_normal = input.normal;
+
+    res.color = float4(model_normal.xyz, 1.f);
+    return res;
 
     // res.color.xyz = camera_dir;
     // res.color.w = 1.f;

@@ -62,34 +62,6 @@ void Game::run()
             continue;
         }
 
-        // handle device inputs
-        {
-            { // move camera
-                Camera* camera = render_->camera();
-                float camera_move_delta = delta_time_ * 1e2f;
-                auto keyboard = win_->input()->keyboard();
-
-                if (keyboard.shift.pressed) {
-                    camera_move_delta *= 1e1f;
-                }
-                camera->move_forward(camera_move_delta * keyboard.w.pressed);
-                camera->move_right(camera_move_delta * keyboard.d.pressed);
-                camera->move_forward(-camera_move_delta * keyboard.s.pressed);
-                camera->move_right(-camera_move_delta * keyboard.a.pressed);
-                camera->move_up(camera_move_delta * keyboard.space.pressed);
-                camera->move_up(-camera_move_delta * keyboard.c.pressed);
-            }
-            { // rotate camera
-                const float camera_rotate_delta = delta_time_ / 1e1f;
-                auto mouse = win_->input()->mouse();
-                if (mouse.rbutton)
-                { // camera rotation with right button pressed
-                    render_->camera()->pitch(-mouse.delta_y * camera_rotate_delta); // negate to convert from Win32 coordinates
-                    render_->camera()->yaw(mouse.delta_x * camera_rotate_delta);
-                }
-            }
-        }
-
         {
             // prepares
             {

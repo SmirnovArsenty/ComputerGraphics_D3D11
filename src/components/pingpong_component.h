@@ -1,6 +1,7 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include <SimpleMath.h>
+using namespace DirectX::SimpleMath;
 
 #include "component/game_component.h"
 #include "render/resource/shader.h"
@@ -25,7 +26,7 @@ private:
     // game info
     struct BrickInfo
     {
-        glm::vec2 position{ 0.f, 0.f }; // first - setup padding (const), second - setup vertical position [0 + width / 2; 1 - width / 2]
+        Vector2 position{ 0.f, 0.f }; // first - setup padding (const), second - setup vertical position [0 + width / 2; 1 - width / 2]
 
         // relative to window size
         float width;
@@ -34,12 +35,12 @@ private:
 
     struct CircleInfo
     {
-        glm::vec2 position{ 0.f, 0.f };
+        Vector2 position{ 0.f, 0.f };
         float radius;
         uint32_t triangle_count;
     } circle_, default_circle_;
-    glm::vec2 circle_move_direction_{ 0.f, 0.f }, default_circle_move_direction_{ 0.f, 0.f };
-    glm::vec2 prev_circle_position_{ 0.f, 0.f };
+    Vector2 circle_move_direction_{ 0.f, 0.f }, default_circle_move_direction_{ 0.f, 0.f };
+    Vector2 prev_circle_position_{ 0.f, 0.f };
 
     BrickInfo player_, default_player_;
     BrickInfo opponent_, default_opponent_;

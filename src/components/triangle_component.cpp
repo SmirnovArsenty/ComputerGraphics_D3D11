@@ -24,13 +24,13 @@ void TriangleComponent::initialize()
 
     // create buffers
     auto device = Game::inst()->render().device();
-    glm::vec4 points[] = { // full-screen triangle
-        glm::vec4(3.f, -1.f, 0.f, 1.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f),
-        glm::vec4(-1.f, 3.f, 0.f, 1.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
-        glm::vec4(-1.f, -1.f, 0.f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
+    Vector4 points[] = { // full-screen triangle
+        Vector4(3.f, -1.f, 0.f, 1.0f), Vector4(1.0f, 0.0f, 0.0f, 1.0f),
+        Vector4(-1.f, 3.f, 0.f, 1.0f), Vector4(0.0f, 0.0f, 1.0f, 1.0f),
+        Vector4(-1.f, -1.f, 0.f, 1.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f),
     };
 
-    vertex_buffer_.initialize(D3D11_BIND_VERTEX_BUFFER, points, sizeof(glm::vec4) * 2, 3);
+    vertex_buffer_.initialize(D3D11_BIND_VERTEX_BUFFER, points, sizeof(Vector4) * 2, 3);
 #ifndef NDEBUG
     vertex_buffer_.set_name("triangle_vertex_buffer");
 #endif

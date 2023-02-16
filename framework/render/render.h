@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-#include <glm/glm.hpp>
-#include <directxmath.h>
+#include <SimpleMath.h>
+using namespace DirectX::SimpleMath;
 
 class GameComponent;
 class Camera;

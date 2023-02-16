@@ -52,42 +52,39 @@ void Input::handle_win_input(WPARAM wparam, LPARAM lparam)
         button_state.pressed = (keyboard.Message == WM_KEYDOWN);
         button_state.released = (keyboard.Message == WM_KEYUP);
 
-        InputEvent input_event{};
-        input_event.type = InputEvent::InputEventType::KEYBOARD;
-        input_event.keyboard = { keyboard.VKey, button_state };
-        event_queue_.push(input_event);
+        keyboard_event_queue_.push({ keyboard.VKey, button_state });
     }
     else if (raw_input->header.dwType == RIM_TYPEMOUSE)
     {
         RAWMOUSE mouse = raw_input->data.mouse;
-        InputEvent input_event{};
-        input_event.type = InputEvent::InputEventType::MOUSE;
         MouseState mouse_state;
         {
             if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) {
-                mouse_state.lbutton = true;
+                mouse_state.lbutton.pressed = true;
             } else if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP) {
-                mouse_state.lbutton = false;
+                mouse_state.lbutton.pressed = false;
+                mouse_state.lbutton.released = true;
             }
 
             if (mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN) {
-                mouse_state.mbutton = true;
+                mouse_state.mbutton.pressed = true;
             } else if (mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP) {
-                mouse_state.mbutton = false;
+                mouse_state.mbutton.pressed = false;
+                mouse_state.mbutton.released = true;
             }
 
             if (mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN) {
-                mouse_state.rbutton = true;
+                mouse_state.rbutton.pressed = true;
             } else if (mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP) {
-                mouse_state.rbutton = false;
+                mouse_state.rbutton.pressed = false;
+                mouse_state.rbutton.released = true;
             }
 
             mouse_state.delta_x = float(mouse.lLastX);
             mouse_state.delta_y = float(mouse.lLastY);
         }
 
-        input_event.mouse = mouse_state;
-        event_queue_.push(input_event);
+        mouse_event_queue_.push(mouse_state);
     }
 
     DefRawInputProc(&raw_input, 1, sizeof(RAWINPUTHEADER));
@@ -95,42 +92,59 @@ void Input::handle_win_input(WPARAM wparam, LPARAM lparam)
 
 void Input::process_win_input()
 {
-    if (event_queue_.empty()) {
-        return;
-    }
-    InputEvent input_event = event_queue_.front();
-    event_queue_.pop();
-    switch (input_event.type)
+    if (!keyboard_event_queue_.empty())
     {
-        case InputEvent::InputEventType::MOUSE:
-        {
-            mouse_state_ = input_event.mouse;
-            break;
+        KeyboardEvent keyboard_event = keyboard_event_queue_.front();
+        keyboard_event_queue_.pop();
+        if (keyboard_event.key_code == VK_ESCAPE) {
+            Game::inst()->set_animating(false);
+            Game::inst()->set_destroy();
         }
-        case InputEvent::InputEventType::KEYBOARD:
-        {
-            auto button = input_event.keyboard;
 
-            if (button.key_code == VK_ESCAPE) {
-                Game::inst()->set_animating(false);
-                Game::inst()->set_destroy();
-            }
-#define HANDLE_INPUT_EVENT(key, code)                               \
-    do {                                                            \
-        if (button.key_code == code) {                              \
-            keyboard_state_.key.pressed = button.state.pressed;     \
-            keyboard_state_.key.released = button.state.released;   \
-        }                                                           \
+#define HANDLE_INPUT_EVENT(key, code)                                       \
+    do {                                                                    \
+        if (keyboard_event.key_code == code) {                              \
+            keyboard_state_.key.pressed = keyboard_event.state.pressed;     \
+            keyboard_state_.key.released = keyboard_event.state.released;   \
+        }                                                                   \
     } while ((void)0, 0)
-
-            FOR_EACH_BUTTON(HANDLE_INPUT_EVENT);
+        FOR_EACH_BUTTON(HANDLE_INPUT_EVENT);
 #undef HANDLE_INPUT_EVENT
-            break;
+    }
+
+    while (!mouse_event_queue_.empty())
+    {
+        MouseState mouse_state = mouse_event_queue_.front();
+        mouse_event_queue_.pop();
+        mouse_state_.delta_x += mouse_state.delta_x;
+        mouse_state_.delta_y += mouse_state.delta_y;
+        mouse_state_.delta_z += mouse_state.delta_z;
+
+        // lbutton
+        if (mouse_state.lbutton.pressed) {
+            mouse_state_.lbutton.pressed = true;
         }
-        default:
-        {
-            throw std::runtime_error("unknown input event type from event queue");
-            break;
+        if (mouse_state_.lbutton.released) {
+            mouse_state_.lbutton.pressed = false;
+            mouse_state_.lbutton.released = true;
+        }
+
+        // mbutton
+        if (mouse_state.mbutton.pressed) {
+            mouse_state_.mbutton.pressed = true;
+        }
+        if (mouse_state_.mbutton.released) {
+            mouse_state_.mbutton.pressed = false;
+            mouse_state_.mbutton.released = true;
+        }
+
+        // rbutton
+        if (mouse_state.rbutton.pressed) {
+            mouse_state_.rbutton.pressed = true;
+        }
+        if (mouse_state_.rbutton.released) {
+            mouse_state_.rbutton.pressed = false;
+            mouse_state_.rbutton.released = true;
         }
     }
 }
@@ -141,6 +155,10 @@ void Input::clear_after_process()
     mouse_state_.delta_x = 0;
     mouse_state_.delta_y = 0;
     mouse_state_.delta_z = 0;
+
+    mouse_state_.lbutton.released = false;
+    mouse_state_.mbutton.released = false;
+    mouse_state_.rbutton.released = false;
 
     // clear keyboard release states
 #define CLEAR_RELEASED(key, code)               \
