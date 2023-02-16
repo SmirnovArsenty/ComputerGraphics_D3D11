@@ -11,6 +11,16 @@ class PingpongComponent : public GameComponent
 private:
     static std::string brick_shader_source_;
     static std::string circle_shader_source_;
+    static std::string net_shader_source_;
+    static std::string number_shader_source_;
+
+    struct NetInfo
+    {
+        uint32_t net_elements_count = 30; // net elements count
+        float width = 0.02f;
+        float height = 0.02f;
+        uint32_t unused = 0;
+    } net_info_;
 
     // game info
     struct BrickInfo
@@ -29,6 +39,7 @@ private:
         uint32_t triangle_count;
     } circle_, default_circle_;
     glm::vec2 circle_move_direction_{ 0.f, 0.f }, default_circle_move_direction_{ 0.f, 0.f };
+    glm::vec2 prev_circle_position_{ 0.f, 0.f };
 
     BrickInfo player_, default_player_;
     BrickInfo opponent_, default_opponent_;
@@ -39,13 +50,23 @@ private:
     // resources
     Buffer brick_index_buffer_;
     Buffer circle_index_buffer_;
+    // Buffer net_index_buffer_; // don't need it, use brick index buffer instanced
+
+    Buffer number_index_buffers_[10];
+    Buffer number_vertex_buffers_[10];
 
     ConstBuffer player_brick_info_buffer_;
     ConstBuffer opponent_brick_info_buffer_;
     ConstBuffer circle_info_buffer_;
+    ConstBuffer net_info_buffer_;
+    ConstBuffer score_info_;
 
     Shader brick_shader_;
     Shader circle_shader_;
+    Shader net_shader_;
+
+    Shader number_shader_;
+    ID3D11InputLayout* input_layout_{ nullptr };
 
     ID3D11RasterizerState* rasterizer_state_{ nullptr };
 public:

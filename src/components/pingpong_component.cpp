@@ -28,6 +28,23 @@ void PingpongComponent::initialize()
     reload();
 
     // setup shaders
+    number_shader_.set_vs_shader_from_memory(number_shader_source_, "VSMain", nullptr, nullptr);
+    number_shader_.set_ps_shader_from_memory(number_shader_source_, "PSMain", nullptr, nullptr);
+#ifndef NDEBUG
+    number_shader_.set_name("number_shader");
+#endif
+    D3D11_INPUT_ELEMENT_DESC inputs[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+    number_shader_.set_input_layout(inputs, std::size(inputs));
+
+    net_shader_.set_vs_shader_from_memory(net_shader_source_, "VSMain", nullptr, nullptr);
+    net_shader_.set_ps_shader_from_memory(net_shader_source_, "PSMain", nullptr, nullptr);
+#ifndef NDEBUG
+    net_shader_.set_name("net_shader");
+#endif
+
     brick_shader_.set_vs_shader_from_memory(brick_shader_source_, "VSMain", nullptr, nullptr);
     brick_shader_.set_ps_shader_from_memory(brick_shader_source_, "PSMain", nullptr, nullptr);
 
@@ -40,12 +57,10 @@ void PingpongComponent::initialize()
 #ifndef NDEBUG
     circle_shader_.set_name("circle_shader");
 #endif
-
     // input layout is not required: only index buffer used
 
     std::vector<uint16_t> brick_index_data = { 0,1,2, 0,1,3 };
     brick_index_buffer_.initialize(D3D11_BIND_INDEX_BUFFER, brick_index_data.data(), sizeof(brick_index_data[0]), UINT(std::size(brick_index_data)));
-
 #ifndef NDEBUG
     brick_index_buffer_.set_name("brick_index_buffer");
 #endif
@@ -58,7 +73,7 @@ void PingpongComponent::initialize()
         circle_index_data.push_back(i + 2);
     }
     circle_index_data.back() = 1; // link with first triangle
-    circle_index_buffer_.initialize(D3D11_BIND_INDEX_BUFFER, circle_index_data.data(), sizeof(circle_index_data[0]), UINT(std::size(circle_index_data)));
+    circle_index_buffer_.initialize(D3D11_BIND_INDEX_BUFFER, circle_index_data.data(), sizeof(circle_index_data[0]), UINT(circle_index_data.size()));
 
 #ifndef NDEBUG
     circle_index_buffer_.set_name("circle_index_buffer");
@@ -67,12 +82,27 @@ void PingpongComponent::initialize()
     player_brick_info_buffer_.initialize(sizeof(BrickInfo), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
     opponent_brick_info_buffer_.initialize(sizeof(BrickInfo), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
     circle_info_buffer_.initialize(sizeof(CircleInfo), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+    net_info_buffer_.initialize(sizeof(NetInfo), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
 #ifndef NDEBUG
     player_brick_info_buffer_.set_name("player_uniform_buffer");
     opponent_brick_info_buffer_.set_name("opponent_uniform_buffer");
     circle_info_buffer_.set_name("circle_uniform_buffer");
 #endif
+
+    net_info_buffer_.update_data(&net_info_);
+
+    // setup vertex buffers for numbers
+    {
+        // 0
+        {
+        }
+
+        // 1
+        {
+        }
+
+    }
 
     CD3D11_RASTERIZER_DESC rastDesc = {};
     rastDesc.CullMode = D3D11_CULL_NONE;
@@ -94,6 +124,12 @@ void PingpongComponent::draw()
     context->RSSetState(rasterizer_state_);
 
     context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    // draw net
+    net_shader_.use();
+    brick_index_buffer_.bind();
+    net_info_buffer_.bind(0);
+    context->DrawIndexedInstanced(brick_index_buffer_.count(), net_info_.net_elements_count, 0, 0, 0);
 
     // draw bricks
     brick_shader_.use();
@@ -140,6 +176,11 @@ void PingpongComponent::update()
     if (paused_) {
         return;
     }
+
+    std::string score_string;
+    score_string += "Player: " + std::to_string(score_.first);
+    score_string += " | Opponent: " + std::to_string(score_.second);
+    SetWindowText(Game::inst()->win().window(), score_string.c_str());
 
     // toggle (AI vs AI) and (user vs AI) modes
     if (keyboard.s.released) {
@@ -294,8 +335,21 @@ void PingpongComponent::destroy_resources()
     brick_index_buffer_.destroy();
     circle_index_buffer_.destroy();
 
+    for (size_t i = 0; i < std::size(number_index_buffers_); ++i)
+    {
+        number_index_buffers_[i].destroy();
+    }
+
+    for (size_t i = 0; i < std::size(number_vertex_buffers_); ++i)
+    {
+        number_vertex_buffers_[i].destroy();
+    }
+
     brick_shader_.destroy();
     circle_shader_.destroy();
+
+    net_shader_.destroy();
+    number_shader_.destroy();
 }
 
 std::string PingpongComponent::brick_shader_source_ = {
@@ -385,6 +439,87 @@ PS_IN VSMain( VS_IN input )
 
 float4 PSMain( PS_IN input ) : SV_Target
 {
-    return (1.f).xxxx;
+    return float4(1.f, 1.f, 0.f, 1.f); // yellow circle
+}
+)"};
+
+std::string PingpongComponent::net_shader_source_{
+R"(struct VS_IN
+{
+    uint index : SV_VertexID;
+    uint instance : SV_InstanceID;
+};
+
+struct PS_IN
+{
+    float4 pos : SV_POSITION;
+};
+
+cbuffer NetInfo : register(b0)
+{
+    uint net_elements_count;
+    float width;
+    float height;
+    uint unused;
+};
+
+PS_IN VSMain( VS_IN input )
+{
+    PS_IN res = (PS_IN)0;
+
+    float y_pos = (float(input.instance) / net_elements_count + .5f / net_elements_count) * 2.f - 1.f;
+    float half_width = width / 2;
+    float half_height = height / 2;
+    float2 pos = (0).xx;
+    if (input.index == 0) {
+        pos = float2(-half_width, y_pos - half_height);
+    }
+    if (input.index == 1) {
+        pos = float2(half_width, y_pos + half_height);
+    }
+    if (input.index == 2) {
+        pos = float2(-half_width, y_pos + half_height);
+    }
+    if (input.index == 3) {
+        pos = float2(half_width, y_pos - half_height);
+    }
+
+    res.pos = float4(pos, 0.5f, 1.f);
+    return res;
+}
+
+float4 PSMain( PS_IN input ) : SV_Target
+{
+    return float4(1.f, 0.f, 1.f, 1.f); // cyan net
+}
+)"};
+
+std::string PingpongComponent::number_shader_source_{
+R"(struct VS_IN
+{
+    float2 pos : POSITION0;
+};
+
+struct PS_IN
+{
+    float4 pos : SV_POSITION;
+};
+
+cbuffer NumberInfo
+{
+    float2 position;
+    float size;
+};
+
+PS_IN VSMain( VS_IN input )
+{
+    PS_IN res = (PS_IN)0;
+    res.pos = float4(position + input.pos * size, 0.5f, 1.f);
+    return res;
+}
+
+float4 PSMain( PS_IN input ) : SV_Target
+{
+    return float4(1.f, 1.f, 1.f, 1.f);
 }
 )"};

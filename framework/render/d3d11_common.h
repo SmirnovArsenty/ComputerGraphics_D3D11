@@ -6,7 +6,7 @@
     do {                                                                                                               \
         HRESULT status = command;                                                                                      \
         if (FAILED(status)) {                                                                                          \
-            size_t count = sprintf_s(nullptr, 1 << 20, "D3D11 error at " __FILE__ ":%d : %d", __LINE__, status);       \
+            size_t count = sprintf_s(nullptr, 0, "D3D11 error at " __FILE__ ":%d : %d", __LINE__, status);       \
             std::string info;                                                                                          \
             info.resize(count);                                                                                        \
             sprintf_s(const_cast<char*>(info.data()), count, "D3D11 error at " __FILE__ ":%d : %d", __LINE__, status); \
