@@ -93,12 +93,6 @@ void Input::handle_win_input(WPARAM wparam, LPARAM lparam)
     DefRawInputProc(&raw_input, 1, sizeof(RAWINPUTHEADER));
 }
 
-// if (key == VK_ESCAPE)
-// {
-//     animating_ = false;
-//     destroy_ = true;
-// }
-
 void Input::process_win_input()
 {
     if (event_queue_.empty()) {
@@ -121,12 +115,6 @@ void Input::process_win_input()
                 Game::inst()->set_animating(false);
                 Game::inst()->set_destroy();
             }
-
-            OutputDebugString(("Key: " + std::to_string(button.key_code) +
-                               " pressed: " + std::to_string(button.state.pressed) +
-                               " released: " + std::to_string(button.state.released) +
-                               "\n").c_str());
-
 #define HANDLE_INPUT_EVENT(key, code)                               \
     do {                                                            \
         if (button.key_code == code) {                              \

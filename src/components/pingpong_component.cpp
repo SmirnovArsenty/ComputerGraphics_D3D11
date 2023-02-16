@@ -224,8 +224,9 @@ void PingpongComponent::update()
             {
                 if (circle_.position.x > opponent_.position.x + opponent_.height / 2)
                 {
-                    MessageBox(NULL, "You won!", "Winner!", MB_OK | MB_ICONEXCLAMATION);
-                    Game::inst()->set_destroy();
+                    // add point to player
+                    score_.first++;
+                    reload();
                 }
                 if (circle_.position.x + circle_.radius > opponent_.position.x - opponent_.height / 2.f &&
                     circle_.position.y + circle_.radius < opponent_.position.y + opponent_.width / 2.f &&
@@ -239,14 +240,18 @@ void PingpongComponent::update()
 
                     // reduce size by every hit
                     opponent_.width *= 0.95f;
+                    if (opponent_.width < 0.04f) {
+                        opponent_.width = 0.04f;
+                    }
                 }
             }
             else // move to player
             {
                 if (circle_.position.x < player_.position.x - player_.height / 2)
                 {
-                    MessageBox(NULL, "You lose!", "Loser!", MB_OK | MB_ICONEXCLAMATION);
-                    Game::inst()->set_destroy();
+                    // add point to opponent
+                    score_.second++;
+                    reload();
                 }
                 if (circle_.position.x - circle_.radius < player_.position.x + player_.height / 2.f &&
                     circle_.position.y + circle_.radius < player_.position.y + player_.width / 2.f &&
@@ -258,6 +263,9 @@ void PingpongComponent::update()
                     circle_move_direction_ = glm::normalize(circle_move_direction_);
 
                     player_.width *= 0.95f;
+                    if (player_.width < 0.04f) {
+                        player_.width = 0.04f;
+                    }
                 }
             }
         }
