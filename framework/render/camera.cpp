@@ -15,44 +15,34 @@ Camera::~Camera()
 {
 }
 
-void Camera::set_camera(Vector3 position, Quaternion rotation)
+void Camera::set_camera(Vector3 position, Vector3 forward)
 {
     position_ = position;
-    rotation_ = rotation;
+    forward_ = forward;
 }
 
-void Camera::pitch(float delta) const
+void Camera::pitch(float delta) // vertical
 {
-    Quaternion qx = Quaternion::CreateFromAxisAngle(Vector3(1.f, 0.f, 0.f), delta);
+    Vector3 up(0.f, 1.f, 0.f);
+    Vector3 right = forward_.Cross(up);
+    up = forward_.Cross(right);
 
-    Quaternion orientation;
-    (rotation_ * qx).Normalize(orientation);
-
-    Vector3 euler = orientation.ToEuler();
-    euler /= 57.2957795131f;
-    if (abs(euler.z) - 180.0f <= 1e-6f) {
-        if (euler.x <= -90.0f) {
-            euler.x += 180.0f;
-        }
-        else if (euler.x >= 90.0f) {
-            euler.x -= 180.0f;
-        }
-    }
-    if (abs(euler.x) > 85.0f) {
-        orientation = rotation_;
-    }
-    rotation_ = orientation;
+    forward_ += up * delta;
+    forward_.Normalize();
 }
 
-void Camera::yaw(float delta) const
+void Camera::yaw(float delta) // horizontal
 {
-    Quaternion qy = Quaternion::CreateFromAxisAngle(Vector3(0.f, 1.f, 0.f), delta);
-    (qy * rotation_).Normalize(rotation_);
+    Vector3 up(0.f, 1.f, 0.f);
+    Vector3 right = up.Cross(forward_);
+
+    forward_ += right * delta;
+    forward_.Normalize();
 }
 
 const Matrix Camera::view() const
 {
-    return DirectX::XMMatrixLookAtLH(position_, position_ + direction(), Vector3(0.f, 1.f, 0.f));
+    return DirectX::XMMatrixLookAtRH(position_, position_ + direction(), Vector3(0.f, 1.f, 0.f));
     // return Matrix::CreateWorld(position_, direction(), Vector3(0.f, 1.f, 0.f));
 }
 
@@ -88,45 +78,23 @@ const Vector3& Camera::position() const
     return position_;
 }
 
-const Vector3 Camera::direction() const
+const Vector3& Camera::direction() const
 {
-    Vector3 forward = Vector3(0.f, 0.f, 1.f);
-    Quaternion conj;
-    rotation_.Conjugate(conj);
-    { // forward * glm::conjugate(rotation_), but in SimpleMath
-        Quaternion conj_inv;
-        conj.Inverse(conj_inv);
-        Vector3 quat_vector{ conj.x, conj.y, conj.z };
-        Vector3 uv = quat_vector * forward;
-        Vector3 uuv = quat_vector * forward;
-
-        forward = forward + ((uv * conj.w) + uuv) * 2.f;
-    } // looks simple
-    forward.Normalize();
-    return forward;
+    return forward_;
 }
 
 void Camera::move_forward(float delta)
 {
-    position_ += direction() * delta;
+    position_ += forward_ * delta;
 }
 
 void Camera::move_right(float delta)
 {
-    // right vector is negative x (right-hand axis)
-    Quaternion conj;
-    rotation_.Conjugate(conj);
-    Vector3 v(-delta, 0.f, 0.f); // right
-    { // v * glm::conjugate(rotation_), but in SimpleMath
-        Quaternion conj_inv;
-        conj.Inverse(conj_inv);
-        Vector3 quat_vector{ conj_inv.x, conj_inv.y, conj_inv.z };
-        Vector3 uv = quat_vector * v;
-        Vector3 uuv = quat_vector * v;
+    Vector3 up(0.f, 1.f, 0.f);
+    Vector3 right = forward_.Cross(up);
+    right.Normalize();
 
-        v = v + ((uv * conj_inv.w) + uuv) * 2.f;
-    } // looks simple
-    position_ += v;
+    position_ += right * delta;
 }
 
 void Camera::move_up(float delta)

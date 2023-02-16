@@ -62,21 +62,18 @@ void Input::handle_win_input(WPARAM wparam, LPARAM lparam)
             if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) {
                 mouse_state.lbutton.pressed = true;
             } else if (mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP) {
-                mouse_state.lbutton.pressed = false;
                 mouse_state.lbutton.released = true;
             }
 
             if (mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN) {
                 mouse_state.mbutton.pressed = true;
             } else if (mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP) {
-                mouse_state.mbutton.pressed = false;
                 mouse_state.mbutton.released = true;
             }
 
             if (mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN) {
                 mouse_state.rbutton.pressed = true;
             } else if (mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP) {
-                mouse_state.rbutton.pressed = false;
                 mouse_state.rbutton.released = true;
             }
 
@@ -124,7 +121,7 @@ void Input::process_win_input()
         if (mouse_state.lbutton.pressed) {
             mouse_state_.lbutton.pressed = true;
         }
-        if (mouse_state_.lbutton.released) {
+        if (mouse_state.lbutton.released) {
             mouse_state_.lbutton.pressed = false;
             mouse_state_.lbutton.released = true;
         }
@@ -133,7 +130,7 @@ void Input::process_win_input()
         if (mouse_state.mbutton.pressed) {
             mouse_state_.mbutton.pressed = true;
         }
-        if (mouse_state_.mbutton.released) {
+        if (mouse_state.mbutton.released) {
             mouse_state_.mbutton.pressed = false;
             mouse_state_.mbutton.released = true;
         }
@@ -142,7 +139,7 @@ void Input::process_win_input()
         if (mouse_state.rbutton.pressed) {
             mouse_state_.rbutton.pressed = true;
         }
-        if (mouse_state_.rbutton.released) {
+        if (mouse_state.rbutton.released) {
             mouse_state_.rbutton.pressed = false;
             mouse_state_.rbutton.released = true;
         }
