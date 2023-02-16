@@ -82,8 +82,8 @@ void Input::handle_win_input(WPARAM wparam, LPARAM lparam)
                 mouse_state.rbutton = false;
             }
 
-            mouse_state.delta_x = mouse.lLastX;
-            mouse_state.delta_y = mouse.lLastY;
+            mouse_state.delta_x = float(mouse.lLastX);
+            mouse_state.delta_y = float(mouse.lLastY);
         }
 
         input_event.mouse = mouse_state;
