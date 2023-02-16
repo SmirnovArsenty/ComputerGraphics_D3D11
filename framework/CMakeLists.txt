@@ -36,8 +36,9 @@ set(group_component_common
     component/game_component_decl.h
 )
 
-
 set(group_win32
+    win32/input.cpp
+    win32/input.h
     win32/win.cpp
     win32/win.h
 )

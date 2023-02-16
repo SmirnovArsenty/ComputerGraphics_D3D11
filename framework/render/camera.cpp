@@ -74,7 +74,7 @@ glm::mat4 Camera::view() const
 glm::mat4 Camera::proj()
 {
     RECT rc;
-    GetWindowRect(Game::inst()->win().get_window(), &rc);
+    GetWindowRect(Game::inst()->win().window(), &rc);
     float width = float(rc.right - rc.left);
     float height = float(rc.bottom - rc.top);
 

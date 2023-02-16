@@ -12,6 +12,7 @@ private:
     static std::string brick_shader_source_;
     static std::string circle_shader_source_;
 
+    // game info
     struct BrickInfo
     {
         glm::vec2 position{ 0.f, 0.f }; // first - setup padding (const), second - setup vertical position [0 + width / 2; 1 - width / 2]
@@ -26,12 +27,16 @@ private:
         glm::vec2 position{ 0.f, 0.f };
         float radius;
         uint32_t triangle_count;
-    } circle_;
-    glm::vec2 circle_move_direction_{ 0.f, 0.f };
+    } circle_, default_circle_;
+    glm::vec2 circle_move_direction_{ 0.f, 0.f }, default_circle_move_direction_{ 0.f, 0.f };
 
-    BrickInfo player_;
-    BrickInfo opponent_;
+    BrickInfo player_, default_player_;
+    BrickInfo opponent_, default_opponent_;
+    std::pair<uint32_t, uint32_t> score_; // player points; opponent points
+    bool paused_{ false }; // 'P'
+    bool self_mode_{ true }; // 'S'
 
+    // resources
     Buffer brick_index_buffer_;
     Buffer circle_index_buffer_;
 

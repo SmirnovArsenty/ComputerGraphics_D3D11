@@ -1,28 +1,32 @@
 #include "core/game.h"
 #include "render/render.h"
+#include "win32/win.h"
+#include "win32/input.h"
 #include "pingpong_component.h"
 #include "render/d3d11_common.h"
 
 PingpongComponent::PingpongComponent()
 {
     // setup game data
-    player_.position = glm::vec2(-1.f + 0.02f, .0f);
-    player_.width = 0.3f;
-    player_.height = 0.02f;
+    default_player_.position = glm::vec2(-1.f + 0.02f, .0f);
+    default_player_.width = 0.3f;
+    default_player_.height = 0.02f;
 
-    opponent_.position = glm::vec2(1.f - 0.02f, .0f);
-    opponent_.width = 0.3f;
-    opponent_.height = 0.02f;
+    default_opponent_.position = glm::vec2(1.f - 0.02f, .0f);
+    default_opponent_.width = 0.3f;
+    default_opponent_.height = 0.02f;
 
-    circle_.triangle_count = 10;
-    circle_.position = glm::vec2(0.f, 0.f);
-    circle_.radius = 0.02f;
+    default_circle_.triangle_count = 10;
+    default_circle_.position = glm::vec2(0.f, 0.f);
+    default_circle_.radius = 0.02f;
 
-    circle_move_direction_ = glm::vec2(1.f, 0.f); // initially moves to opponent
+    default_circle_move_direction_ = glm::vec2(1.f, 0.f); // initially moves to opponent
 }
 
 void PingpongComponent::initialize()
 {
+    reload();
+
     // setup shaders
     brick_shader_.set_vs_shader_from_memory(brick_shader_source_, "VSMain", nullptr, nullptr);
     brick_shader_.set_ps_shader_from_memory(brick_shader_source_, "PSMain", nullptr, nullptr);
@@ -115,13 +119,32 @@ void PingpongComponent::draw()
 
 void PingpongComponent::reload()
 {
+    // setup game components
+    player_ = default_player_;
+    opponent_ = default_opponent_;
+    circle_ = default_circle_;
+    circle_move_direction_ = default_circle_move_direction_;
 }
 
 void PingpongComponent::update()
 {
-    const Game::KeyboardState& keyboard = Game::inst()->keyboard_state();
-    const float brick_move_delta = Game::inst()->delta_time() * 1e0f * 1.5f;
-    const float circle_move_delta = Game::inst()->delta_time() * 1e0f * 2;
+    const auto& keyboard = Game::inst()->win().input()->keyboard();
+    const float brick_move_delta = Game::inst()->delta_time() * 1e0f * 1.3f;
+    const float circle_move_delta = Game::inst()->delta_time() * 1e0f * 2.f;
+
+    // toggle pause
+    if (keyboard.p.released) {
+        paused_ = !paused_;
+    }
+
+    if (paused_) {
+        return;
+    }
+
+    // toggle (AI vs AI) and (user vs AI) modes
+    if (keyboard.s.released) {
+        self_mode_ = !self_mode_;
+    }
 
     // handle circle fly
     {
@@ -153,11 +176,35 @@ void PingpongComponent::update()
     }
 
     // handle user input
+    if (!self_mode_)
     {
-        player_.position.y += brick_move_delta * keyboard.up;
-        player_.position.y -= brick_move_delta * keyboard.down;
+        player_.position.y += brick_move_delta * keyboard.up.pressed;
+        player_.position.y -= brick_move_delta * keyboard.down.pressed;
 
         // clamp player brick position
+        const float half_width = player_.width / 2.f;
+        if (player_.position.y < -1.f + half_width)
+        {
+            player_.position.y = -1.f + half_width;
+        }
+        if (player_.position.y > 1.f - half_width)
+        {
+            player_.position.y = 1.f - half_width;
+        }
+    }
+    else // AI as player
+    {
+        // update AI position when circle moves in its direction
+        if (circle_move_direction_.x < 0) {
+            if (player_.position.y > circle_.position.y) {
+                player_.position.y -= brick_move_delta;
+            }
+            if (player_.position.y < circle_.position.y) {
+                player_.position.y += brick_move_delta;
+            }
+        }
+
+        // clamp opponent brick position
         const float half_width = player_.width / 2.f;
         if (player_.position.y < -1.f + half_width)
         {

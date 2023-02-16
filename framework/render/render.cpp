@@ -11,7 +11,7 @@ void Render::initialize()
 {
     Game* engine = Game::inst();
 
-    HWND hWnd = engine->win().get_window();
+    HWND hWnd = engine->win().window();
     if (hWnd == NULL)
     {
         OutputDebugString("Window is not initialized!");
@@ -137,7 +137,7 @@ void Render::resize()
     {
         Game* engine = Game::inst();
         RECT rc;
-        GetWindowRect(Game::inst()->win().get_window(), &rc);
+        GetWindowRect(Game::inst()->win().window(), &rc);
         swapchain_->ResizeBuffers(swapchain_buffer_count_, rc.right - rc.left, rc.bottom - rc.top,
                                   DXGI_FORMAT_R8G8B8A8_UNORM,
                                   DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
@@ -164,7 +164,7 @@ void Render::prepare_frame()
     context_->ClearState();
 
     RECT rc;
-    GetWindowRect(Game::inst()->win().get_window(), &rc);
+    GetWindowRect(Game::inst()->win().window(), &rc);
     D3D11_VIEWPORT viewport = {};
     viewport.Width = static_cast<float>(rc.right - rc.left);
     viewport.Height = static_cast<float>(rc.bottom - rc.top);
@@ -245,7 +245,7 @@ void Render::create_depth_stencil_texture_and_view()
     destroy_depth_stencil_texture_and_view();
 
     RECT rc;
-    GetWindowRect(Game::inst()->win().get_window(), &rc);
+    GetWindowRect(Game::inst()->win().window(), &rc);
     D3D11_TEXTURE2D_DESC depth_texture_desc;
     backbuffer_texture_->GetDesc(&depth_texture_desc);
     depth_texture_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
