@@ -146,7 +146,7 @@ void PingpongComponent::imgui()
     {
         ImGui::Text("Score");
         ImGui::SameLine();
-        ImGui::Text("%.2f", score_.first);
+        ImGui::Text("%d", score_.first);
 
         ImGui::Text("Size");
         ImGui::SameLine();
@@ -164,7 +164,7 @@ void PingpongComponent::imgui()
     {
         ImGui::Text("Score");
         ImGui::SameLine();
-        ImGui::Text("%.2f", score_.second);
+        ImGui::Text("%d", score_.second);
 
         ImGui::Text("Size");
         ImGui::SameLine();
@@ -210,7 +210,9 @@ void PingpongComponent::reload()
     // setup game components
     player_ = default_player_;
     opponent_ = default_opponent_;
+    int32_t triangle_count_save = circle_.triangle_count;
     circle_ = default_circle_;
+    circle_.triangle_count = triangle_count_save;
     circle_move_direction_ = default_circle_move_direction_;
     circle_move_speed_ = default_circle_move_speed_;
 }
@@ -237,21 +239,31 @@ void PingpongComponent::update()
 
     // handle circle fly
     {
-        prev_circle_position_ = circle_.position;
         circle_.position += circle_move_direction_ * circle_move_speed_ * circle_move_delta;
     }
 
     // handle AI
     {
-        // update AI position when circle moves in its direction
-        if (circle_move_direction_.x > 0) {
-            if (opponent_.position.y > circle_.position.y) {
-                opponent_.position.y -= brick_move_delta;
+        float target_y = circle_.position.y;
+        if (circle_move_direction_.x > 0) { // to opponent
+            target_y = (circle_move_direction_.y / circle_move_direction_.x) *
+                             (opponent_.position.x - circle_.position.x) +
+                             circle_.position.y;
+        }
+        while (target_y > 1.f || target_y < -1.f) {
+            if (target_y > 1.f) {
+                target_y = 2 - target_y;
             }
-            if (opponent_.position.y < circle_.position.y) {
-                opponent_.position.y += brick_move_delta;
+            if (target_y < -1.f) {
+                target_y = -2 - target_y;
             }
         }
+        // target_y = circle_.position.y;
+        float delta_move = target_y - opponent_.position.y;
+        if (abs(delta_move) > 0.02f) {
+            delta_move = delta_move / abs(delta_move);
+        }
+        opponent_.position.y += delta_move * brick_move_delta;
 
         // clamp opponent brick position
         const float half_width = opponent_.width / 2.f;
@@ -284,15 +296,26 @@ void PingpongComponent::update()
     }
     else // AI as player
     {
-        // update AI position when circle moves in its direction
-        if (circle_move_direction_.x < 0) {
-            if (player_.position.y > circle_.position.y) {
-                player_.position.y -= brick_move_delta;
+        float target_y = circle_.position.y;
+        if (circle_move_direction_.x < 0) { // to player
+            target_y = (circle_move_direction_.y / circle_move_direction_.x) *
+                        (player_.position.x - circle_.position.x) +
+                        circle_.position.y;
+        }
+        while (target_y > 1.f || target_y < -1.f) {
+            if (target_y > 1.f) {
+                target_y = 2 - target_y;
             }
-            if (player_.position.y < circle_.position.y) {
-                player_.position.y += brick_move_delta;
+            if (target_y < -1.f) {
+                target_y = -2 - target_y;
             }
         }
+
+        float delta_move = target_y - player_.position.y;
+        if (abs(delta_move) > 0.02f) {
+            delta_move = delta_move / abs(delta_move);
+        }
+        player_.position.y += delta_move * brick_move_delta;
 
         // clamp opponent brick position
         const float half_width = player_.width / 2.f;
@@ -310,54 +333,67 @@ void PingpongComponent::update()
     {
         // horizontal
         {
+            const float circle_tg = circle_move_direction_.y / circle_move_direction_.x;
             if (circle_move_direction_.x > 0) // move to AI
             {
-                if (circle_.position.x > opponent_.position.x + opponent_.height / 2)
+                if (circle_.position.x > opponent_.position.x - opponent_.height / 2 - circle_.radius)
                 {
-                    // add point to player
-                    score_.first++;
-                    reload();
-                }
-                if (circle_.position.x + circle_.radius > opponent_.position.x - opponent_.height / 2.f &&
-                    circle_.position.y + circle_.radius < opponent_.position.y + opponent_.width / 2.f &&
-                    circle_.position.y - circle_.radius > opponent_.position.y - opponent_.width / 2.f)
-                { // brick hit
-                    // reflect circle
-                    circle_move_direction_.x *= -1.f;
-                    srand(static_cast<unsigned>(Game::inst()->delta_time() * 1e9f));
-                    circle_move_direction_.y = (2.f * rand() / RAND_MAX - 1.f) * .5f;
-                    circle_move_direction_.Normalize();
+                    float intersect_y = circle_tg * ((opponent_.position.x - opponent_.height / 2) - circle_.position.x) + circle_.position.y;
+                    float delta = opponent_.width / 2 + circle_.radius;
+                    if (abs(intersect_y - opponent_.position.y) < delta)
+                    { // brick hit
+                        // reflect circle
+                        srand(static_cast<unsigned>(Game::inst()->delta_time() * 1e9f));
+                        circle_move_direction_.x *= (-1.f * rand() / RAND_MAX);
+                        // circle_move_direction_.y = (intersect_y - opponent_.position.y) / opponent_.width;
+                        circle_move_direction_.y = (2.f * rand() / RAND_MAX - 1.f) * .5f;
+                        if (circle_move_direction_.x > -0.2f)
+                        {
+                            circle_move_direction_.x = -0.2f;
+                        }
+                        circle_move_direction_.Normalize();
 
-                    // reduce size by every hit
-                    opponent_.width *= 0.95f;
-                    if (opponent_.width < 0.04f) {
-                        opponent_.width = 0.04f;
+                        // reduce size by every hit
+                        opponent_.width *= 0.95f;
+                        if (opponent_.width < 0.04f) {
+                            opponent_.width = 0.04f;
+                        }
+                        circle_move_speed_ *= 1.01f;
+                    } else { // miss
+                        // add point to player
+                        score_.first++;
+                        reload();
                     }
-                    circle_move_speed_ *= 1.01f;
                 }
             }
             else // move to player
             {
-                if (circle_.position.x < player_.position.x - player_.height / 2)
-                {
-                    // add point to opponent
-                    score_.second++;
-                    reload();
-                }
-                if (circle_.position.x - circle_.radius < player_.position.x + player_.height / 2.f &&
-                    circle_.position.y + circle_.radius < player_.position.y + player_.width / 2.f &&
-                    circle_.position.y - circle_.radius > player_.position.y - player_.width / 2.f)
-                { // brick hit
-                    circle_move_direction_.x *= -1.f;
-                    srand(static_cast<unsigned>(Game::inst()->delta_time() * 1e9f));
-                    circle_move_direction_.y = (2.f * rand() / RAND_MAX - 1.f) * .5f;
-                    circle_move_direction_.Normalize();
+                if (circle_.position.x < player_.position.x + player_.height / 2 + circle_.radius) {
+                    float intersect_y = circle_tg * ((player_.position.x + player_.height / 2) - circle_.position.x) + circle_.position.y;
+                    float delta = player_.width / 2 + circle_.radius;
+                    if (abs(intersect_y - player_.position.y) < delta)
+                    { // brick hit
+                        srand(static_cast<unsigned>(Game::inst()->delta_time() * 1e9f));
+                        circle_move_direction_.x *= (1.f * rand() / RAND_MAX);
+                        // circle_move_direction_.y = -(intersect_y - player_.position.y) / player_.width;
+                        circle_move_direction_.y = (2.f * rand() / RAND_MAX - 1.f) * .5f;
 
-                    player_.width *= 0.95f;
-                    if (player_.width < 0.04f) {
-                        player_.width = 0.04f;
+                        if (circle_move_direction_.x < 0.2f)
+                        {
+                            circle_move_direction_.x = 0.2f;
+                        }
+                        circle_move_direction_.Normalize();
+
+                        player_.width *= 0.95f;
+                        if (player_.width < 0.04f) {
+                            player_.width = 0.04f;
+                        }
+                        circle_move_speed_ *= 1.01f;
+                    } else { // miss
+                        // add point to opponent
+                        score_.second++;
+                        reload();
                     }
-                    circle_move_speed_ *= 1.01f;
                 }
             }
         }

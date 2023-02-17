@@ -8,6 +8,8 @@
 class Shader
 {
 private:
+    ID3D11ComputeShader* compute_shader_{ nullptr }; // optional
+    ID3DBlob* compute_bc_{ nullptr };
     ID3D11VertexShader* vertex_shader_{ nullptr };
     ID3DBlob* vertex_bc_{ nullptr };
     ID3D11PixelShader* pixel_shader_{ nullptr };
@@ -20,6 +22,9 @@ public:
 
     void set_name(const std::string& name);
 
+    void set_compute_shader_from_file(const std::string& filename,
+                                 const std::string& entrypoint,
+                                 D3D_SHADER_MACRO*, ID3DInclude*);
     void set_vs_shader_from_file(const std::string& filename,
                                  const std::string& entrypoint,
                                  D3D_SHADER_MACRO*, ID3DInclude*);
@@ -27,6 +32,9 @@ public:
                                  const std::string& entrypoint,
                                  D3D_SHADER_MACRO*, ID3DInclude*);
 
+    void set_compute_shader_from_memory(const std::string& data,
+                                   const std::string& entrypoint,
+                                   D3D_SHADER_MACRO*, ID3DInclude*);
     void set_vs_shader_from_memory(const std::string& data,
                                    const std::string& entrypoint,
                                    D3D_SHADER_MACRO*, ID3DInclude*);

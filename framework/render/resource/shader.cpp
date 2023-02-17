@@ -100,6 +100,44 @@ void Shader::set_ps_shader_from_file(const std::string& filename,
                                           nullptr, &pixel_shader_));
 }
 
+void Shader::set_compute_shader_from_memory(const std::string& data,
+                                       const std::string& entrypoint,
+                                       D3D_SHADER_MACRO* macro, ID3DInclude* include)
+{
+    assert(compute_bc_ == nullptr);
+    assert(compute_shader_ == nullptr);
+
+    ID3DBlob* error_code = nullptr;
+    unsigned int compile_flags = 0;
+#ifndef NDEBUG
+    compile_flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+    HRESULT status = D3DCompile(data.data(), data.size(), nullptr,
+                                macro, include,
+                                entrypoint.c_str(), "vs_5_0",
+                                compile_flags, 0,
+                                &compute_bc_, &error_code);
+
+    if (FAILED(status))
+    {
+        if (error_code)
+        {
+            std::stringstream err;
+            err << (char*)(error_code->GetBufferPointer());
+            OutputDebugString(err.str().c_str());
+        }
+        else
+        {
+            OutputDebugString("Missing shader file");
+        }
+        assert(false);
+    }
+    auto device = Game::inst()->render().device();
+    D3D11_CHECK(device->CreateComputeShader(compute_bc_->GetBufferPointer(),
+                                            compute_bc_->GetBufferSize(),
+                                            nullptr, &compute_shader_));
+}
+
 void Shader::set_vs_shader_from_memory(const std::string& data,
                                        const std::string& entrypoint,
                                        D3D_SHADER_MACRO* macro, ID3DInclude* include)

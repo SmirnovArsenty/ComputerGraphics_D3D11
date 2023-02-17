@@ -122,7 +122,7 @@ void Game::run()
             frame_count++;
 
             if (total_time > 1.0f) {
-                // OutputDebugString(("FPS: " + std::to_string(frame_count / total_time) + "\n").c_str());
+                OutputDebugString(("FPS: " + std::to_string(frame_count / total_time) + "\n").c_str());
                 total_time -= 1.0f;
                 frame_count = 0;
             }

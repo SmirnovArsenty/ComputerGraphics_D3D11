@@ -9,7 +9,7 @@
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxguid.lib")
 
-int WinMain(HINSTANCE, HINSTANCE, char*, int)
+int WINAPI WinMain(HINSTANCE, HINSTANCE, char*, int)
 {
     auto traingle = std::make_unique<TriangleComponent>();
     Game::inst()->add_component(traingle.get());

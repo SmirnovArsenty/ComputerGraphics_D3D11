@@ -46,7 +46,12 @@ void Render::initialize()
     swapDesc.SampleDesc.Quality = 0;
 
     {
-#if 1
+        uint32_t create_device_flags = 0;
+#ifndef NDEBUG
+        create_device_flags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+
+#if 0
         // choose best adapter by memory
         Microsoft::WRL::ComPtr<IDXGIFactory> factory;
         D3D11_CHECK(CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&factory));
@@ -73,14 +78,14 @@ void Render::initialize()
         factory->EnumAdapters(best_adapter_index, &adapter);
 
         D3D11_CHECK(D3D11CreateDeviceAndSwapChain(adapter.Get(), D3D_DRIVER_TYPE_UNKNOWN,
-                                                  nullptr, D3D11_CREATE_DEVICE_DEBUG,
+                                                  nullptr, create_device_flags,
                                                   featureLevel, 1, D3D11_SDK_VERSION,
                                                   &swapDesc, &swapchain_,
                                                   &device_, nullptr, &context_));
 #else
         // choose default adapter
         D3D11_CHECK(D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE,
-                                                  nullptr, D3D11_CREATE_DEVICE_DEBUG,
+                                                  nullptr, create_device_flags,
                                                   featureLevel, 1, D3D11_SDK_VERSION,
                                                   &swapDesc, &swapchain_,
                                                   &device_, nullptr, &context_));

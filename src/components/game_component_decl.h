@@ -10,3 +10,4 @@ using namespace DirectX::SimpleMath;
 #include "components/impl/triangle_component.h"
 #include "components/impl/gltfmodel_component.h"
 #include "components/impl/pingpong_component.h"
+#include "components/impl/particle_component.h"

@@ -33,7 +33,6 @@ set(group_render_resource
 
 set(group_component_common
     component/game_component.h
-    component/game_component_decl.h
 )
 
 set(group_win32

@@ -1,18 +1,19 @@
 #pragma once
 
+#include <Windows.h>
 #include <cassert>
 
-#define D3D11_CHECK(command)                                                                                           \
-    do {                                                                                                               \
-        HRESULT status = command;                                                                                      \
-        if (FAILED(status)) {                                                                                          \
-            size_t count = sprintf_s(nullptr, 0, "D3D11 error at " __FILE__ ":%d : %d", __LINE__, status);       \
-            std::string info;                                                                                          \
-            info.resize(count);                                                                                        \
-            sprintf_s(const_cast<char*>(info.data()), count, "D3D11 error at " __FILE__ ":%d : %d", __LINE__, status); \
-            OutputDebugString(info.c_str());                                                                           \
-            assert(false);                                                                                             \
-        }                                                                                                              \
+#define D3D11_CHECK(command)                                                                                                    \
+    do {                                                                                                                        \
+        HRESULT status = command;                                                                                               \
+        if (FAILED(status)) {                                                                                                   \
+            std::string info;                                                                                                   \
+            info.resize(1000);                                                                                                  \
+            sprintf_s(const_cast<char*>(info.data()), info.size(), "D3D11 error at " __FILE__ ":%d : %d", __LINE__, status);    \
+            OutputDebugString(info.c_str());                                                                                    \
+            MessageBox(NULL, info.c_str(), "OH NOOOOOOOO", MB_OK | MB_ICONERROR);                                               \
+            assert(false);                                                                                                      \
+        }                                                                                                                       \
     } while(0, 0)
 
 #define SAFE_RELEASE(ptr)       \
