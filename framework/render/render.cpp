@@ -1,5 +1,8 @@
 #include <chrono>
 #include <thread>
+#include <imgui/imgui.h>
+#include <imgui/backends/imgui_impl_win32.h>
+#include <imgui/backends/imgui_impl_dx11.h>
 #include "render.h"
 #include "core/game.h"
 #include "win32/win.h"
@@ -120,10 +123,16 @@ void Render::initialize()
     create_depth_stencil_texture_and_view();
 
     camera_ = new Camera();
-    // camera_->set_camera(Vector3(100.f), Vector3(0.f));
+    // camera_->set_camera(Vector3(100.f), Vector3(0.f, 0.f, 1.f));
 
     // initialize debug annotations
     context_->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), reinterpret_cast<void**>(&user_defined_annotation_));
+
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.IniFilename = NULL;
+    ImGui_ImplWin32_Init(hWnd);
+    ImGui_ImplDX11_Init(device_.Get(), context_.Get());
 }
 
 void Render::resize()
@@ -215,6 +224,21 @@ void Render::prepare_resources()
     context_->ClearDepthStencilView(depth_stencil_view_, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0xFF);
 }
 
+void Render::prepare_imgui()
+{
+    ImGui_ImplDX11_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
+}
+
+void Render::end_imgui()
+{
+    // Render dear imgui into screen
+    ImGui::EndFrame();
+    ImGui::Render();
+    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+}
+
 void Render::restore_targets()
 {
     context_->OMSetRenderTargets(0, nullptr, nullptr);
@@ -227,6 +251,10 @@ void Render::end_frame()
 
 void Render::destroy_resources()
 {
+    ImGui_ImplDX11_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext(ImGui::GetCurrentContext());
+
     user_defined_annotation_->Release();
 
     delete camera_;

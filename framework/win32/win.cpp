@@ -8,11 +8,21 @@
 #include "win.h"
 #include "input.h"
 
+#include <imgui/imgui.h>
+#include <imgui/backends/imgui_impl_dx11.h>
+#include <imgui/backends/imgui_impl_win32.h>
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam,
+                                                             LPARAM lParam);
+
+
 // static
 LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lparam)
 {
     static int32_t old_x = 0;
     static int32_t old_y = 0;
+
+    ImGui_ImplWin32_WndProcHandler(hWnd, message, wparam, lparam);
+
     switch (message)
     {
         case WM_GETMINMAXINFO:

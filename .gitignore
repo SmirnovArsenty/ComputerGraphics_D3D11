@@ -2,3 +2,4 @@ build/
 .vs/
 *.exe
 .vscode
+imgui.ini

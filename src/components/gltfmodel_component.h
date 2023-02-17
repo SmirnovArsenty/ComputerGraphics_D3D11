@@ -120,6 +120,7 @@ public:
 
     void initialize() override;
     void draw() override;
+    void imgui() override;
     void reload() override;
     void update() override;
     void destroy_resources() override;

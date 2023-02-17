@@ -1,3 +1,4 @@
+#include <imgui/imgui.h>
 #include "core/game.h"
 #include "render/render.h"
 #include "win32/win.h"
@@ -28,17 +29,6 @@ void PingpongComponent::initialize()
     reload();
 
     // setup shaders
-    number_shader_.set_vs_shader_from_memory(number_shader_source_, "VSMain", nullptr, nullptr);
-    number_shader_.set_ps_shader_from_memory(number_shader_source_, "PSMain", nullptr, nullptr);
-#ifndef NDEBUG
-    number_shader_.set_name("number_shader");
-#endif
-    D3D11_INPUT_ELEMENT_DESC inputs[] =
-    {
-        { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    };
-    number_shader_.set_input_layout(inputs, std::size(inputs));
-
     net_shader_.set_vs_shader_from_memory(net_shader_source_, "VSMain", nullptr, nullptr);
     net_shader_.set_ps_shader_from_memory(net_shader_source_, "PSMain", nullptr, nullptr);
 #ifndef NDEBUG
@@ -66,7 +56,7 @@ void PingpongComponent::initialize()
 #endif
 
     std::vector<uint16_t> circle_index_data; // = { 0,1,2, 0,2,3 };
-    for (uint16_t i = 0; i < circle_.triangle_count; ++i)
+    for (uint16_t i = 0; i < max_triangle_count_; ++i)
     {
         circle_index_data.push_back(0); // first index is 0 - circle center
         circle_index_data.push_back(i + 1);
@@ -91,18 +81,6 @@ void PingpongComponent::initialize()
 #endif
 
     net_info_buffer_.update_data(&net_info_);
-
-    // setup vertex buffers for numbers
-    {
-        // 0
-        {
-        }
-
-        // 1
-        {
-        }
-
-    }
 
     CD3D11_RASTERIZER_DESC rastDesc = {};
     rastDesc.CullMode = D3D11_CULL_NONE;
@@ -153,6 +131,80 @@ void PingpongComponent::draw()
     context->DrawIndexed(circle_index_buffer_.count(), 0, 0);
 }
 
+void PingpongComponent::imgui()
+{
+    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+
+    uint32_t window_flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
+                            ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse;
+
+    constexpr uint32_t gamers_window_width = 160;
+
+    ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkSize.x / 4 - gamers_window_width, 0), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(gamers_window_width, 85), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Player", nullptr, window_flags);
+    {
+        ImGui::Text("Score");
+        ImGui::SameLine();
+        ImGui::Text("%.2f", score_.first);
+
+        ImGui::Text("Size");
+        ImGui::SameLine();
+        ImGui::Text("%.2fx%.2f", player_.width, player_.height);
+
+        ImGui::Text("Position");
+        ImGui::SameLine();
+        ImGui::Text("%.2fx%.2f", player_.position.x, player_.position.y);
+    }
+    ImGui::End();
+
+    ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkSize.x * 3 / 4, 0), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(gamers_window_width, 85), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Opponent", nullptr, window_flags);
+    {
+        ImGui::Text("Score");
+        ImGui::SameLine();
+        ImGui::Text("%.2f", score_.second);
+
+        ImGui::Text("Size");
+        ImGui::SameLine();
+        ImGui::Text("%.2fx%.2f", opponent_.width, opponent_.height);
+
+        ImGui::Text("Position");
+        ImGui::SameLine();
+        ImGui::Text("%.2fx%.2f", opponent_.position.x, opponent_.position.y);
+    }
+    ImGui::End();
+
+    // show circle info
+    constexpr uint32_t common_info_window_width = 300;
+    ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkSize.x / 2 - common_info_window_width / 2, 0), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(common_info_window_width, 125), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Circle", nullptr, window_flags);
+    {
+        ImGui::Text("Radius");
+        ImGui::SameLine();
+        ImGui::Text("%.2f", circle_.radius);
+
+        ImGui::Text("Position");
+        ImGui::SameLine();
+        ImGui::Text("%.2fx%.2f", circle_.position.x, circle_.position.y);
+
+        ImGui::Text("Triangle count");
+        ImGui::SameLine();
+        ImGui::SliderInt("triangle_count", &circle_.triangle_count, 3, max_triangle_count_);
+
+        ImGui::Text("Direction");
+        ImGui::SameLine();
+        ImGui::Text("%.2fx%.2f", circle_move_direction_.x, circle_move_direction_.y);
+
+        ImGui::Text("Speed");
+        ImGui::SameLine();
+        ImGui::Text("%.2f", circle_move_speed_);
+    }
+    ImGui::End();
+}
+
 void PingpongComponent::reload()
 {
     // setup game components
@@ -160,6 +212,7 @@ void PingpongComponent::reload()
     opponent_ = default_opponent_;
     circle_ = default_circle_;
     circle_move_direction_ = default_circle_move_direction_;
+    circle_move_speed_ = default_circle_move_speed_;
 }
 
 void PingpongComponent::update()
@@ -177,11 +230,6 @@ void PingpongComponent::update()
         return;
     }
 
-    std::string score_string;
-    score_string += "Player: " + std::to_string(score_.first);
-    score_string += " | Opponent: " + std::to_string(score_.second);
-    SetWindowText(Game::inst()->win().window(), score_string.c_str());
-
     // toggle (AI vs AI) and (user vs AI) modes
     if (keyboard.s.released) {
         self_mode_ = !self_mode_;
@@ -189,7 +237,8 @@ void PingpongComponent::update()
 
     // handle circle fly
     {
-        circle_.position += circle_move_direction_ * circle_move_delta;
+        prev_circle_position_ = circle_.position;
+        circle_.position += circle_move_direction_ * circle_move_speed_ * circle_move_delta;
     }
 
     // handle AI
@@ -284,6 +333,7 @@ void PingpongComponent::update()
                     if (opponent_.width < 0.04f) {
                         opponent_.width = 0.04f;
                     }
+                    circle_move_speed_ *= 1.01f;
                 }
             }
             else // move to player
@@ -307,6 +357,7 @@ void PingpongComponent::update()
                     if (player_.width < 0.04f) {
                         player_.width = 0.04f;
                     }
+                    circle_move_speed_ *= 1.01f;
                 }
             }
         }
@@ -331,25 +382,15 @@ void PingpongComponent::destroy_resources()
     player_brick_info_buffer_.destroy();
     opponent_brick_info_buffer_.destroy();
     circle_info_buffer_.destroy();
+    net_info_buffer_.destroy();
 
     brick_index_buffer_.destroy();
     circle_index_buffer_.destroy();
-
-    for (size_t i = 0; i < std::size(number_index_buffers_); ++i)
-    {
-        number_index_buffers_[i].destroy();
-    }
-
-    for (size_t i = 0; i < std::size(number_vertex_buffers_); ++i)
-    {
-        number_vertex_buffers_[i].destroy();
-    }
 
     brick_shader_.destroy();
     circle_shader_.destroy();
 
     net_shader_.destroy();
-    number_shader_.destroy();
 }
 
 std::string PingpongComponent::brick_shader_source_ = {
@@ -491,35 +532,5 @@ PS_IN VSMain( VS_IN input )
 float4 PSMain( PS_IN input ) : SV_Target
 {
     return float4(1.f, 0.f, 1.f, 1.f); // cyan net
-}
-)"};
-
-std::string PingpongComponent::number_shader_source_{
-R"(struct VS_IN
-{
-    float2 pos : POSITION0;
-};
-
-struct PS_IN
-{
-    float4 pos : SV_POSITION;
-};
-
-cbuffer NumberInfo
-{
-    float2 position;
-    float size;
-};
-
-PS_IN VSMain( VS_IN input )
-{
-    PS_IN res = (PS_IN)0;
-    res.pos = float4(position + input.pos * size, 0.5f, 1.f);
-    return res;
-}
-
-float4 PSMain( PS_IN input ) : SV_Target
-{
-    return float4(1.f, 1.f, 1.f, 1.f);
 }
 )"};

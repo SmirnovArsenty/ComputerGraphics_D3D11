@@ -85,6 +85,16 @@ void Game::run()
                 }
             }
 
+            // Handle components imgui
+            {
+                Annotation annotation("draw imgui for components");
+                render_->prepare_imgui();
+                for (auto game_component : game_components_)
+                {
+                    game_component->imgui();
+                }
+                render_->end_imgui();
+            }
             {
                 Annotation annotation("after draw");
                 render_->restore_targets();

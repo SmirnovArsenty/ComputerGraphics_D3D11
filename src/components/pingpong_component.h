@@ -13,7 +13,6 @@ private:
     static std::string brick_shader_source_;
     static std::string circle_shader_source_;
     static std::string net_shader_source_;
-    static std::string number_shader_source_;
 
     struct NetInfo
     {
@@ -37,9 +36,11 @@ private:
     {
         Vector2 position{ 0.f, 0.f };
         float radius;
-        uint32_t triangle_count;
+        int32_t triangle_count;
     } circle_, default_circle_;
+    int32_t max_triangle_count_{ 30 };
     Vector2 circle_move_direction_{ 0.f, 0.f }, default_circle_move_direction_{ 0.f, 0.f };
+    float circle_move_speed_{ 1.f }, default_circle_move_speed_{ 1.f };
     Vector2 prev_circle_position_{ 0.f, 0.f };
 
     BrickInfo player_, default_player_;
@@ -53,21 +54,14 @@ private:
     Buffer circle_index_buffer_;
     // Buffer net_index_buffer_; // don't need it, use brick index buffer instanced
 
-    Buffer number_index_buffers_[10];
-    Buffer number_vertex_buffers_[10];
-
     ConstBuffer player_brick_info_buffer_;
     ConstBuffer opponent_brick_info_buffer_;
     ConstBuffer circle_info_buffer_;
     ConstBuffer net_info_buffer_;
-    ConstBuffer score_info_;
 
     Shader brick_shader_;
     Shader circle_shader_;
     Shader net_shader_;
-
-    Shader number_shader_;
-    ID3D11InputLayout* input_layout_{ nullptr };
 
     ID3D11RasterizerState* rasterizer_state_{ nullptr };
 public:
@@ -75,6 +69,7 @@ public:
 
     void initialize() override;
     void draw() override;
+    void imgui() override;
     void reload() override;
     void update() override;
     void destroy_resources() override;

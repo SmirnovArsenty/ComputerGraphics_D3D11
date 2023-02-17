@@ -51,6 +51,10 @@ public:
 
     void prepare_frame();
     void prepare_resources();
+
+    void prepare_imgui();
+    void end_imgui();
+
     void restore_targets();
     void end_frame();
 

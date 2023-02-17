@@ -6,8 +6,8 @@ using namespace DirectX::SimpleMath;
 class Camera
 {
 private:
-    Vector3 position_{ 0.f, 1000.f, 0.f };
-    Vector3 forward_{ 0.f, 0.f, 1.f };
+    Vector3 position_{ 0.f, 100.f, 0.f };
+    Vector3 forward_{ 1.f, 0.f, 0.f };
 
 public:
     Camera();

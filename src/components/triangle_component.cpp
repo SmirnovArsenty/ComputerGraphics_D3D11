@@ -104,6 +104,11 @@ void TriangleComponent::draw()
     context->DrawIndexed(index_buffer_.count(), 0, 0);
 }
 
+void TriangleComponent::imgui()
+{
+    // stub
+}
+
 void TriangleComponent::reload()
 {
     // stub

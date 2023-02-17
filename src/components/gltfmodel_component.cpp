@@ -319,6 +319,10 @@ void GLTFModelComponent::draw()
     }
 }
 
+void GLTFModelComponent::imgui()
+{
+}
+
 void GLTFModelComponent::reload()
 {
 }
