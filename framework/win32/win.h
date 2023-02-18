@@ -3,10 +3,13 @@
 #include <Windows.h>
 #include <cstdint>
 
+class Input;
+
 class Win final
 {
 private:
     HWND hWnd_{ NULL };
+    Input* input_{ nullptr };
 
     static LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam);
 public:
@@ -17,5 +20,6 @@ public:
     void run();
     void destroy();
 
-    HWND get_window() const;
+    HWND window() const;
+    Input* input() const;
 };

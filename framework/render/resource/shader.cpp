@@ -18,7 +18,9 @@ void Shader::set_name(const std::string& name)
     pixel_shader_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(ps_name.size()), ps_name.c_str());
 
     std::string il_name = name + "_input_layout";
-    input_layout_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(il_name.size()), il_name.c_str());
+    if (input_layout_ != nullptr) {
+        input_layout_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(il_name.size()), il_name.c_str());
+    }
 }
 
 void Shader::set_vs_shader_from_file(const std::string& filename,
@@ -96,6 +98,44 @@ void Shader::set_ps_shader_from_file(const std::string& filename,
     D3D11_CHECK(device->CreatePixelShader(pixel_bc_->GetBufferPointer(),
                                           pixel_bc_->GetBufferSize(),
                                           nullptr, &pixel_shader_));
+}
+
+void Shader::set_compute_shader_from_memory(const std::string& data,
+                                       const std::string& entrypoint,
+                                       D3D_SHADER_MACRO* macro, ID3DInclude* include)
+{
+    assert(compute_bc_ == nullptr);
+    assert(compute_shader_ == nullptr);
+
+    ID3DBlob* error_code = nullptr;
+    unsigned int compile_flags = 0;
+#ifndef NDEBUG
+    compile_flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+    HRESULT status = D3DCompile(data.data(), data.size(), nullptr,
+                                macro, include,
+                                entrypoint.c_str(), "vs_5_0",
+                                compile_flags, 0,
+                                &compute_bc_, &error_code);
+
+    if (FAILED(status))
+    {
+        if (error_code)
+        {
+            std::stringstream err;
+            err << (char*)(error_code->GetBufferPointer());
+            OutputDebugString(err.str().c_str());
+        }
+        else
+        {
+            OutputDebugString("Missing shader file");
+        }
+        assert(false);
+    }
+    auto device = Game::inst()->render().device();
+    D3D11_CHECK(device->CreateComputeShader(compute_bc_->GetBufferPointer(),
+                                            compute_bc_->GetBufferSize(),
+                                            nullptr, &compute_shader_));
 }
 
 void Shader::set_vs_shader_from_memory(const std::string& data,

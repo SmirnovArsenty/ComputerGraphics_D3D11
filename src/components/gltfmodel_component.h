@@ -1,7 +1,8 @@
 #pragma once
 
 #include <string>
-#include <glm/glm.hpp>
+#include <SimpleMath.h>
+using namespace DirectX::SimpleMath;
 
 #include "component/game_component.h"
 #include "render/resource/shader.h"
@@ -27,9 +28,9 @@ private:
 
     // The vertex layout for the samples' model
     struct Vertex {
-        glm::vec4 pos_uv_x;
-        glm::vec4 normal_uv_y;
-        glm::vec4 color;
+        Vector4 pos_uv_x;
+        Vector4 normal_uv_y;
+        Vector4 color;
     };
 
     // Single vertex buffer for all primitives
@@ -61,7 +62,7 @@ private:
         Node* parent;
         std::vector<Node*> children;
         Mesh mesh;
-        glm::mat4 matrix;
+        Matrix matrix;
         ~Node() {
             for (auto& child : children) {
                 delete child;
@@ -71,7 +72,7 @@ private:
 
     // A glTF material stores information in e.g. the texture that is attached to it and colors
     // struct Material {
-    //     glm::vec4 baseColorFactor = glm::vec4(1.0f);
+    //     Vector4 baseColorFactor = Vector4(1.0f);
     //     uint32_t baseColorTextureIndex;
     // };
 
@@ -100,25 +101,26 @@ private:
     ID3D11RasterizerState* rasterizer_state_{ nullptr };
 
     struct UniformData {
-        glm::mat4 model;
-        glm::mat4 view_proj;
-        glm::vec3 camera_pos;
+        Matrix model;
+        Matrix view_proj;
+        Vector3 camera_pos;
         float res_0;
-        glm::vec3 camera_dir;
+        Vector3 camera_dir;
         float res_1;
     };
 
     ConstBuffer uniform_buffer_;
 
-    glm::mat4 model_transform_;
+    Matrix model_transform_;
 
     void load_node(tinygltf::Model* model, tinygltf::Node* input_node, GLTFModelComponent::Node* parent);
 public:
-    GLTFModelComponent(const std::string& filename, glm::vec3 position = glm::vec3(0.f), glm::vec3 rotation = glm::vec3(0.f), glm::vec3 scale = glm::vec3(1.f));
+    GLTFModelComponent(const std::string& filename, Vector3 position = Vector3(0.f), Quaternion rotation = Quaternion::Identity, Vector3 scale = Vector3(1.f));
     ~GLTFModelComponent();
 
     void initialize() override;
     void draw() override;
+    void imgui() override;
     void reload() override;
     void update() override;
     void destroy_resources() override;

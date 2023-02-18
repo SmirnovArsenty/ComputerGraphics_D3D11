@@ -1,17 +1,28 @@
 #include <Windows.h>
-#include <hidusage.h>
 #include <chrono>
 #include <string>
 #include <stdexcept>
 #include <string>
-#include "win.h"
+
 #include "core/game.h"
+#include "win.h"
+#include "input.h"
+
+#include <imgui/imgui.h>
+#include <imgui/backends/imgui_impl_dx11.h>
+#include <imgui/backends/imgui_impl_win32.h>
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam,
+                                                             LPARAM lParam);
+
 
 // static
 LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lparam)
 {
     static int32_t old_x = 0;
     static int32_t old_y = 0;
+
+    ImGui_ImplWin32_WndProcHandler(hWnd, message, wparam, lparam);
+
     switch (message)
     {
         case WM_GETMINMAXINFO:
@@ -25,32 +36,7 @@ LRESULT CALLBACK Win::WndProc(HWND hWnd, UINT message, WPARAM wparam, LPARAM lpa
         }
         case WM_INPUT:
         {
-            UINT dwSize;
-            GetRawInputData((HRAWINPUT)lparam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
-            BYTE* buffer = (BYTE*)alloca(dwSize);
-            if (!buffer)
-            {
-                throw std::runtime_error("Can not allocate memory buffer");
-            }
-
-            if (GetRawInputData((HRAWINPUT)lparam, RID_INPUT, buffer, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize)
-            {
-                throw std::runtime_error("Error getting raw input data: wrong size");
-            }
-
-            RAWINPUT* raw_input = (RAWINPUT*)buffer;
-            if (raw_input->header.dwType == RIM_TYPEKEYBOARD)
-            {
-                RAWKEYBOARD keyboard = raw_input->data.keyboard;
-                Game::inst()->handle_keyboard(keyboard.VKey, keyboard.Message);
-            }
-            else if (raw_input->header.dwType == RIM_TYPEMOUSE)
-            {
-                RAWMOUSE mouse = raw_input->data.mouse;
-                Game::inst()->handle_mouse(float(mouse.lLastX), float(mouse.lLastY), mouse.usButtonFlags);
-            }
-
-            DefRawInputProc(&raw_input, 1, sizeof(RAWINPUTHEADER));
+            Game::inst()->win().input()->handle_win_input(wparam, lparam);
             return 0;
         }
         case WM_DESTROY:
@@ -126,27 +112,7 @@ bool Win::initialize(uint32_t w, uint32_t h)
 
     ShowCursor(true);
 
-    // setup RawInput
-    {
-        RAWINPUTDEVICE raw_input_devices[2];
-        raw_input_devices[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
-        raw_input_devices[0].usUsage = HID_USAGE_GENERIC_MOUSE;
-        raw_input_devices[0].dwFlags = 0; // RIDEV_NOLEGACY ?
-        raw_input_devices[0].hwndTarget = hWnd_;
-
-        raw_input_devices[1].usUsagePage = HID_USAGE_PAGE_GENERIC;
-        raw_input_devices[1].usUsage = HID_USAGE_GENERIC_KEYBOARD;
-        raw_input_devices[1].dwFlags = 0; // RIDEV_NOLEGACY ?
-        raw_input_devices[1].hwndTarget = hWnd_;
-
-        // HID_USAGE_GENERIC_GAMEPAD ?
-
-        if (!RegisterRawInputDevices(raw_input_devices, static_cast<UINT>(std::size(raw_input_devices)), sizeof(RAWINPUTDEVICE)))
-        {
-            OutputDebugString(("Can not register raw input device. Error: " + std::to_string(GetLastError())).c_str());
-            throw std::runtime_error("Can not register raw input device");
-        }
-    }
+    input_ = new Input(hWnd_);
 
     return true;
 }
@@ -163,9 +129,15 @@ void Win::run()
 
 void Win::destroy()
 {
+    delete input_;
 }
 
-HWND Win::get_window() const
+HWND Win::window() const
 {
     return hWnd_;
+}
+
+Input* Win::input() const
+{
+    return input_;
 }

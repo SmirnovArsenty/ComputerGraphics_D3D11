@@ -33,11 +33,11 @@ set(group_render_resource
 
 set(group_component_common
     component/game_component.h
-    component/game_component_decl.h
 )
 
-
 set(group_win32
+    win32/input.cpp
+    win32/input.h
     win32/win.cpp
     win32/win.h
 )
@@ -64,7 +64,8 @@ source_group("win32" FILES ${group_win32})
 add_library(framework STATIC ${sources})
 target_link_libraries(framework
     tinygltf
-    glm
+    directxtk
+    imgui
 )
 target_include_directories(framework
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/

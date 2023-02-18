@@ -9,7 +9,7 @@
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxguid.lib")
 
-int WinMain(HINSTANCE, HINSTANCE, char*, int)
+int WINAPI WinMain(HINSTANCE, HINSTANCE, char*, int)
 {
     auto sponza = std::make_unique<GLTFModelComponent>("models/Sponza/Sponza.gltf");
     Game::inst()->add_component(sponza.get());
