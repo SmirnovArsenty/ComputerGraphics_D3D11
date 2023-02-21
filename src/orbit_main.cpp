@@ -2,7 +2,7 @@
 #include <dxgidebug.h>
 
 #include "core/game.h"
-#include "components/triangle/triangle_component.h"
+#include "components/orbit/orbit_component.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -11,8 +11,8 @@
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, char*, int)
 {
-    auto traingle = std::make_unique<TriangleComponent>();
-    Game::inst()->add_component(traingle.get());
+    auto orbit = std::make_unique<OrbitComponent>();
+    Game::inst()->add_component(orbit.get());
 
     Game::inst()->initialize(800, 800);
     Game::inst()->run();

@@ -2,7 +2,7 @@
 #include <dxgidebug.h>
 
 #include "core/game.h"
-#include "components/pingpong_component.h"
+#include "components/pingpong/pingpong_component.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")

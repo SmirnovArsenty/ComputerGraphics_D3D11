@@ -17,7 +17,7 @@ class Node;
 class GLTFModelComponent : public GameComponent
 {
 private:
-    constexpr static char* resource_path_{ "./resources/gltfmodel_component/" };
+    constexpr static char* resource_path_{ "./resources/" };
     static std::string shader_source_;
 
     // path is relative to resource_path_

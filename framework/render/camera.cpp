@@ -40,32 +40,50 @@ void Camera::yaw(float delta) // horizontal
     forward_.Normalize();
 }
 
+void Camera::set_type(Camera::CameraType type)
+{
+    type_ = type;
+}
+
 const Matrix Camera::view() const
 {
     return DirectX::XMMatrixLookAtRH(position_, position_ + direction(), Vector3(0.f, 1.f, 0.f));
-    // return Matrix::CreateWorld(position_, direction(), Vector3(0.f, 1.f, 0.f));
 }
 
-// static
-const Matrix Camera::proj()
+const Matrix Camera::proj() const
 {
     RECT rc;
     GetWindowRect(Game::inst()->win().window(), &rc);
     float width = float(rc.right - rc.left);
     float height = float(rc.bottom - rc.top);
-
-    float aspect_ratio = width / height;
-
     constexpr float near_plane = 1.f;
     constexpr float far_plane = 1e4f;
 
-    // default fov - 60 degree
-    constexpr float fov = 60 / 57.2957795131f;
-    auto vfov = static_cast<float>(2 * atan(tan(fov / 2) * (1.0 / aspect_ratio)));
+    switch (type_)
+    {
+        case CameraType::perspective:
+        {
+            float aspect_ratio = width / height;
+            // default fov - 60 degree
+            constexpr float fov = 60 / 57.2957795131f;
+            auto vfov = static_cast<float>(2 * atan(tan(fov / 2) * (1.0 / aspect_ratio)));
 
-    float field_of_view = aspect_ratio > 1.0f ? fov : vfov;
-    // using reversed depth buffer, so far_plane and near_plane are swapped
-    return Matrix::CreatePerspectiveFieldOfView(field_of_view, aspect_ratio, near_plane, far_plane);
+            float field_of_view = aspect_ratio > 1.0f ? fov : vfov;
+            // using reversed depth buffer, so far_plane and near_plane are swapped
+            return Matrix::CreatePerspectiveFieldOfView(field_of_view, aspect_ratio, near_plane, far_plane);
+        }
+        case CameraType::orthographic:
+        {
+            RECT rc;
+            GetWindowRect(Game::inst()->win().window(), &rc);
+            return DirectX::XMMatrixOrthographicRH(width, height, near_plane, far_plane);
+        }
+        default:
+        {
+            break;
+        }
+    }
+    return Matrix::Identity;
 }
 
 const Matrix Camera::view_proj() const
