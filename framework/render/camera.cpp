@@ -19,6 +19,11 @@ void Camera::set_camera(Vector3 position, Vector3 forward)
 {
     position_ = position;
     forward_ = forward;
+
+    if (focus_) {
+        forward_ = focus_target_ - position_;
+        forward_.Normalize();
+    }
 }
 
 void Camera::pitch(float delta) // vertical
@@ -27,8 +32,14 @@ void Camera::pitch(float delta) // vertical
     Vector3 right = forward_.Cross(up);
     up = forward_.Cross(right);
 
-    forward_ += up * delta;
-    forward_.Normalize();
+    if (focus_) {
+        position_ += up * delta;
+        forward_ = focus_target_ - position_;
+        forward_.Normalize();
+    } else {
+        forward_ += up * delta;
+        forward_.Normalize();
+    }
 }
 
 void Camera::yaw(float delta) // horizontal
@@ -36,13 +47,43 @@ void Camera::yaw(float delta) // horizontal
     Vector3 up(0.f, 1.f, 0.f);
     Vector3 right = up.Cross(forward_);
 
-    forward_ += right * delta;
-    forward_.Normalize();
+    if (focus_) {
+        position_ += right * delta;
+        forward_ = focus_target_ - position_;
+        forward_.Normalize();
+    } else {
+        forward_ += right * delta;
+        forward_.Normalize();
+    }
+}
+
+Camera::CameraType Camera::type() const
+{
+    return type_;
 }
 
 void Camera::set_type(Camera::CameraType type)
 {
     type_ = type;
+}
+
+void Camera::focus(Vector3 target)
+{
+    focus_target_ = target;
+    forward_ = focus_target_ - position_;
+    forward_.Normalize();
+    if (!focus_)
+    {
+        focus_distance_ = (position_ - target).Length();
+    }
+    position_ = focus_target_ - forward_ * focus_distance_;
+
+    focus_ = true;
+}
+
+void Camera::reset_focus()
+{
+    focus_ = false;
 }
 
 const Matrix Camera::view() const
@@ -76,7 +117,7 @@ const Matrix Camera::proj() const
         {
             RECT rc;
             GetWindowRect(Game::inst()->win().window(), &rc);
-            return DirectX::XMMatrixOrthographicRH(width, height, near_plane, far_plane);
+            return Matrix::CreateOrthographic(width, height, near_plane, far_plane);
         }
         default:
         {
@@ -103,7 +144,15 @@ const Vector3& Camera::direction() const
 
 void Camera::move_forward(float delta)
 {
-    position_ += forward_ * delta;
+    if (focus_)
+    {
+        focus_distance_ -= delta;
+        position_ = focus_target_ - forward_ * focus_distance_;
+    }
+    else
+    {
+        position_ += forward_ * delta;
+    }
 }
 
 void Camera::move_right(float delta)
@@ -113,9 +162,20 @@ void Camera::move_right(float delta)
     right.Normalize();
 
     position_ += right * delta;
+
+    if (focus_) {
+        forward_ = focus_target_ - position_;
+        forward_.Normalize();
+        position_ = focus_target_ - forward_ * focus_distance_;
+    }
 }
 
 void Camera::move_up(float delta)
 {
     position_ += Vector3(0.f, delta, 0.f);
+    if (focus_) {
+        forward_ = focus_target_ - position_;
+        forward_.Normalize();
+        position_ = focus_target_ - forward_ * focus_distance_;
+    }
 }
