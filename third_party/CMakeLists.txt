@@ -39,3 +39,6 @@ target_include_directories(imgui
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/imgui
 )
+
+# assimp
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/assimp)

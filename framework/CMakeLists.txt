@@ -31,6 +31,17 @@ set(group_render_resource
     render/resource/texture.h
 )
 
+set(group_render_scene
+    render/scene/material.cpp
+    render/scene/material.h
+    render/scene/mesh.cpp
+    render/scene/mesh.h
+    render/scene/model.cpp
+    render/scene/model.h
+    render/scene/scene.cpp
+    render/scene/scene.h
+)
+
 set(group_component_common
     component/game_component.h
 )
@@ -47,6 +58,7 @@ set(sources
 
     ${group_render}
     ${group_render_resource}
+    ${group_render_scene}
 
     ${group_component_common}
 
@@ -58,11 +70,13 @@ set(sources
 source_group("core" FILES ${group_core})
 source_group("render" FILES ${group_render})
 source_group("render/resource" FILES ${group_render_resource})
+source_group("render/scene" FILES ${group_render_scene})
 source_group("component/common" FILES ${group_component_common})
 source_group("win32" FILES ${group_win32})
 
 add_library(framework STATIC ${sources})
 target_link_libraries(framework
+    assimp
     tinygltf
     directxtk
     imgui
