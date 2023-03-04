@@ -23,6 +23,9 @@ set(group_render
 )
 
 set(group_render_resource
+    render/resource/resource_manager.cpp
+    render/resource/resource_manager.h
+
     render/resource/buffer.cpp
     render/resource/buffer.h
     render/resource/shader.cpp

@@ -11,7 +11,7 @@
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, char*, int)
 {
-    auto sponza = std::make_unique<GLTFModelComponent>("models/Sponza/Sponza.gltf");
+    auto sponza = std::make_unique<GLTFModelComponent>("resources/models/Sponza_GLTF/Sponza.gltf");
     Game::inst()->add_component(sponza.get());
 
     Game::inst()->initialize(800, 800);

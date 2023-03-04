@@ -44,7 +44,6 @@ void Model::load_mesh(aiMesh* mesh, const aiScene* scene)
 {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
-    Material material;
 
     for (uint32_t i = 0; i < mesh->mNumVertices; ++i) {
         Vertex vertex;
@@ -71,6 +70,26 @@ void Model::load_mesh(aiMesh* mesh, const aiScene* scene)
 
     if (mesh->mMaterialIndex >= 0) {
         auto mat = scene->mMaterials[mesh->mMaterialIndex];
+        Material material(mat->GetName().C_Str());
+
+        // diffuse
+        for (uint32_t i = 0; i < mat->GetTextureCount(aiTextureType_DIFFUSE); ++i) {
+            aiString str;
+            mat->GetTexture(aiTextureType_DIFFUSE, i, &str);
+            auto texture = new Texture(str.C_Str());
+            auto embedded_texture = scene->GetEmbeddedTexture(str.C_Str());
+            if (embedded_texture != nullptr) {
+                
+            } else {
+                std::string tex_filename(str.C_Str());
+            }
+
+            material.set_diffuse(texture);
+
+        }
+
+        // specular
+
 
         for (uint32_t i = 0; i < mat->mNumProperties; ++i) {
             auto prop = mat->mProperties[i];

@@ -18,9 +18,6 @@
 
 GLTFModelComponent::GLTFModelComponent(const std::string& filename, Vector3 position, Quaternion rotation, Vector3 scale) : gltf_filename_{ filename }
 {
-    // must not be found
-    assert(gltf_filename_.find(resource_path_) == std::string::npos);
-
     // initalize model transform matrix
     model_transform_ = Matrix{}.CreateFromQuaternion(rotation) * Matrix{}.CreateScale(scale) * Matrix{}.CreateTranslation(position);
 }
@@ -239,7 +236,7 @@ void GLTFModelComponent::initialize()
 
     tinygltf::Model import_model;
     std::string err, warn;
-    bool status = gltf_loader.LoadASCIIFromFile(&import_model, &err, &warn, resource_path_ + gltf_filename_, 0u);
+    bool status = gltf_loader.LoadASCIIFromFile(&import_model, &err, &warn, gltf_filename_, 0u);
     if (!status) {
         throw std::runtime_error("Can not load gltf file: " + err);
     }

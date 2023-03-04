@@ -32,13 +32,10 @@ void Camera::pitch(float delta) // vertical
     Vector3 right = forward_.Cross(up);
     up = forward_.Cross(right);
 
+    forward_ += up * delta;
+    forward_.Normalize();
     if (focus_) {
-        position_ += up * delta;
-        forward_ = focus_target_ - position_;
-        forward_.Normalize();
-    } else {
-        forward_ += up * delta;
-        forward_.Normalize();
+        position_ = focus_target_ - forward_ * focus_distance_;
     }
 }
 
@@ -47,13 +44,10 @@ void Camera::yaw(float delta) // horizontal
     Vector3 up(0.f, 1.f, 0.f);
     Vector3 right = up.Cross(forward_);
 
+    forward_ += right * delta;
+    forward_.Normalize();
     if (focus_) {
-        position_ += right * delta;
-        forward_ = focus_target_ - position_;
-        forward_.Normalize();
-    } else {
-        forward_ += right * delta;
-        forward_.Normalize();
+        position_ = focus_target_ - forward_ * focus_distance_;
     }
 }
 
@@ -88,7 +82,11 @@ void Camera::reset_focus()
 
 const Matrix Camera::view() const
 {
-    return DirectX::XMMatrixLookAtRH(position_, position_ + direction(), Vector3(0.f, 1.f, 0.f));
+    Vector3 pos = position_;
+    if (focus_) {
+        pos = focus_target_ - forward_ * focus_distance_;
+    }
+    return DirectX::XMMatrixLookAtRH(pos, pos + direction(), Vector3(0.f, 1.f, 0.f));
 }
 
 const Matrix Camera::proj() const
@@ -161,21 +159,14 @@ void Camera::move_right(float delta)
     Vector3 right = forward_.Cross(up);
     right.Normalize();
 
-    position_ += right * delta;
-
-    if (focus_) {
-        forward_ = focus_target_ - position_;
-        forward_.Normalize();
-        position_ = focus_target_ - forward_ * focus_distance_;
+    if (!focus_) {
+        position_ += right * delta;
     }
 }
 
 void Camera::move_up(float delta)
 {
-    position_ += Vector3(0.f, delta, 0.f);
-    if (focus_) {
-        forward_ = focus_target_ - position_;
-        forward_.Normalize();
-        position_ = focus_target_ - forward_ * focus_distance_;
+    if (!focus_) {
+        position_ += Vector3(0.f, delta, 0.f);
     }
 }
