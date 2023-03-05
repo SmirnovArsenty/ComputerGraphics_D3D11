@@ -6,7 +6,10 @@
 #include "mesh.h"
 
 // public
-Model::Model(const std::string& filename) : filename_{ filename }, meshes_{}
+Model::Model(const std::string& filename) :
+    filename_{ filename },
+    meshes_{},
+    transform_{ Matrix::Identity }
 {
 }
 
@@ -25,6 +28,16 @@ void Model::unload()
 {
     // check initialized
     assert(!meshes_.empty());
+}
+
+void Model::set_transform(Vector3 position, Vector3 scale, Quaternion rotation)
+{
+
+}
+
+void Model::draw() const
+{
+
 }
 
 // private
