@@ -37,7 +37,6 @@ void Material::bind()
         specular_->bind(1);
         ambient_->bind(2);
     }
-
 }
 
 bool Material::is_pbr()
