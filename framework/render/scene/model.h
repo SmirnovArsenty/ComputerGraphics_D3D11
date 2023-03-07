@@ -3,11 +3,14 @@
 #include <string>
 #include <vector>
 
-#include "SimpleMath.h"
+#include <SimpleMath.h>
 using namespace DirectX::SimpleMath;
 
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+
+#include "render/resource/shader.h"
+#include "render/resource/buffer.h"
 
 class Model
 {
@@ -18,7 +21,7 @@ public:
     void unload();
 
     void set_transform(Vector3 position, Vector3 scale, Quaternion rotation);
-    void draw() const;
+    void draw();
 
 private:
     // https://github.com/assimp/assimp/blob/master/samples/SimpleTexturedDirectx11/SimpleTexturedDirectx11/ModelLoader.cpp
@@ -28,7 +31,11 @@ private:
 
     const std::string filename_; // model filename
 
-    Matrix transform_;
-
     std::vector<class Mesh*> meshes_;
+
+    ConstBuffer uniform_buffer_;
+    struct {
+        Matrix transform;
+        Matrix inverse_transpose_transform;
+    } uniform_data_;
 };

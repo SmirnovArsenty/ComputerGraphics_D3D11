@@ -32,11 +32,16 @@ void Shader::set_vs_shader_from_file(const std::string& filename,
     wfilename << filename.c_str();
 
     ID3DBlob* error_code = nullptr;
+
+    unsigned int compile_flags = 0;
+#ifndef NDEBUG
+    compile_flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
     // don't use D3D11_CHECK for this call, need to know compilation error message
     HRESULT status = D3DCompileFromFile(wfilename.str().c_str(), macro, include,
                                         entrypoint.c_str(), "vs_5_0",
-                                        D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-                                        0, &vertex_bc_, &error_code);
+                                        compile_flags, 0,
+                                        &vertex_bc_, &error_code);
     if (FAILED(status))
     {
         if (error_code)

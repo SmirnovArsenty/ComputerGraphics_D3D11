@@ -1,20 +1,21 @@
 #pragma once
 
 #include <string>
+#include <dxgiformat.h>
+#include <d3d11.h>
 
 class Texture
 {
 public:
-    Texture(const std::string& path);
+    Texture();
 
-    inline const std::string& path() const { return path_; }
-
-    void initialize(uint32_t width, uint32_t height);
+    void load(const std::string& path);
+    void initialize(uint32_t width, uint32_t height, DXGI_FORMAT format, void* pixel_data);
     void destroy();
 
-private:
-    std::string path_;
+    void bind(UINT slot);
 
-    D3D11_TEXTURE2D_DESC texture_desc_;
-    ID3D11Texture2D* texture_;
+private:
+    ID3D11Texture2D* texture_{ nullptr };
+    ID3D11ShaderResourceView* resource_view_{ nullptr };
 };

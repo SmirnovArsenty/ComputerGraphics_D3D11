@@ -1,33 +1,64 @@
+#include <cassert>
+
+#include "WICTextureLoader.h"
+using namespace DirectX;
+
 #include "core/game.h"
 #include "render/render.h"
 #include "texture.h"
 
-Texture::Texture(const std::string& path) : path_{ path }
+Texture::Texture()
 {
 }
 
-void Texture::initialize(uint32_t width, uint32_t height)
+void Texture::load(const std::string& path)
 {
-    texture_desc_.Width = width;
-    texture_desc_.Height = height;
-    texture_desc_.MipLevels = 0;
-    texture_desc_.ArraySize = 1;
-    texture_desc_.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // set format
-    texture_desc_.SampleDesc.Count = 1;
-    texture_desc_.SampleDesc.Quality = 0;
-    texture_desc_.Usage = D3D11_USAGE_DEFAULT;
-    texture_desc_.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-    texture_desc_.CPUAccessFlags = 0;
-    texture_desc_.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+    // load texture data
+    assert(!path.empty());
+    assert(texture_ == nullptr);
+    auto device = Game::inst()->render().device();
+    auto context = Game::inst()->render().context();
+    std::wstring filenamew(path.begin(), path.end());
+    CreateWICTextureFromFile(device, filenamew.c_str(), (ID3D11Resource**)&texture_, &resource_view_);
+}
 
-    D3D11_SUBRESOURCE_DATA subresource_data;
-    subresource_data.pSysMem = 0; // pixels
-    subresource_data.SysMemPitch = 0; // row pitch
-    subresource_data.SysMemSlicePitch = 0; // image size
-    Game::inst()->render().device()->CreateTexture2D(&texture_desc_, &subresource_data, &texture_);
+void Texture::initialize(uint32_t width, uint32_t height, DXGI_FORMAT format, void* pixel_data)
+{
+    HRESULT hr;
+    auto device = Game::inst()->render().device();
+    D3D11_TEXTURE2D_DESC desc;
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.Format = format;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    desc.CPUAccessFlags = 0;
+    desc.MiscFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA subresourceData;
+    subresourceData.pSysMem = pixel_data;
+    assert(format == DXGI_FORMAT_B8G8R8A8_UNORM);
+    subresourceData.SysMemPitch = width * 4;
+    subresourceData.SysMemSlicePitch = width * height * 4;
+
+    hr = device->CreateTexture2D(&desc, &subresourceData, &texture_);
+    assert(!FAILED(hr));
+    hr = device->CreateShaderResourceView(texture_, nullptr, &resource_view_);
+    assert(!FAILED(hr));
 }
 
 void Texture::destroy()
 {
+    texture_->Release();
+    texture_ = nullptr;
+}
 
+void Texture::bind(UINT slot)
+{
+    auto context = Game::inst()->render().context();
+    context->PSSetShaderResources(slot, 1, &resource_view_);
 }

@@ -2,38 +2,56 @@
 
 #include <string>
 
+#define MATERIALS(FUNC)     \
+    FUNC(diffuse)           \
+    FUNC(specular)          \
+    FUNC(ambient)           \
+    FUNC(emissive)          \
+    FUNC(height)            \
+    FUNC(normal)            \
+    FUNC(shininess)         \
+    FUNC(opacity)           \
+    FUNC(displacement)      \
+    FUNC(lightmap)          \
+    FUNC(reflection)        \
+    FUNC(base_color)        \
+    FUNC(normal_camera)     \
+    FUNC(emission_color)    \
+    FUNC(metalness)         \
+    FUNC(diffuse_roughness) \
+    FUNC(ambient_occlusion)
+
 class Material
 {
 public:
     Material(const std::string& path);
+    ~Material();
 
-    void set_albedo(const class Texture*);
-    const class Texture* get_albedo() const;
+    void initialize();
 
-    void set_normal(const class Texture*);
-    const class Texture* get_normal() const;
+    void destroy();
 
-    void set_metallic(const class Texture*);
-    const class Texture* get_metallic() const;
+    void bind();
 
-    void set_roughness(const class Texture*);
-    const class Texture* get_roughness() const;
+    bool is_pbr();
 
-    void set_diffuse(const class Texture*);
-    const class Texture* get_diffuse() const;
+#define DECL_MATERIAL_TYPE(material_type)           \
+    void set_##material_type(class Texture*);       \
+    const class Texture* get_##material_type() const;
 
-    void set_specular(const class Texture*);
-    const class Texture* get_specular() const;
+    MATERIALS(DECL_MATERIAL_TYPE)
+
+#undef DECL_MATERIAL_TYPE
 
 private:
     std::string path_;
 
-    const class Texture* albedo_;
-    const class Texture* normal_;
+#define MATERIAL_TYPE_PRIVATE_DECL(material_type)   \
+    class Texture* material_type##_{ nullptr };
 
-    const class Texture* metallic_;
-    const class Texture* roughness_;
+    MATERIALS(MATERIAL_TYPE_PRIVATE_DECL)
 
-    const class Texture* diffuse_;
-    const class Texture* specular_;
+#undef MATERIAL_TYPE_PRIVATE_DECL
+
+    ID3D11SamplerState* sampler_state_{ nullptr };
 };

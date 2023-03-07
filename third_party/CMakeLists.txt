@@ -10,12 +10,18 @@ target_include_directories(tinygltf INTERFACE ${TINYGLTF_DIR})
 
 # directxtk
 set(directxtk_sources
+    # simple math
     ${CMAKE_CURRENT_SOURCE_DIR}/directxtk/Inc/SimpleMath.h
     ${CMAKE_CURRENT_SOURCE_DIR}/directxtk/Inc/SimpleMath.inl
     ${CMAKE_CURRENT_SOURCE_DIR}/directxtk/Src/SimpleMath.cpp
+
+    # texture loader
+    ${CMAKE_CURRENT_SOURCE_DIR}/directxtk/Src/WICTextureLoader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/directxtk/Inc/WICTextureLoader.h
 )
 add_library(directxtk STATIC ${directxtk_sources})
 target_include_directories(directxtk PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/directxtk/Inc)
+target_precompile_headers(directxtk PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/directxtk/Src/pch.h)
 
 # imgui
 set(imgui_sources

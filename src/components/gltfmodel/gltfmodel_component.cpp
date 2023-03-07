@@ -58,7 +58,7 @@ static bool TINYGLTF_ReadWholeFileFunction(std::vector<unsigned char>* data, std
     data_.resize(static_cast<size_t>(read_count));
     file.read(reinterpret_cast<char *>(data_.data()), read_count);
     file.close();
-    
+
     *data = data_;
     return true;
 }

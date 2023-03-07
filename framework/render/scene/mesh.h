@@ -6,20 +6,33 @@
 using namespace DirectX::SimpleMath;
 
 #include "render/resource/buffer.h"
-#include "render/resource/texture.h"
 #include "material.h"
 
 struct Vertex
 {
-    Vector3 position;
-    Vector3 normal;
-    Vector2 texcoord;
+    Vector4 position_uv_x;
+    Vector4 normal_uv_y;
 };
 
 class Mesh
 {
 public:
-    Mesh(const std::vector<Buffer>& vertices, const std::vector<Buffer>& indices, const std::vector<Texture>& textures);
-private:
+    Mesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, Material* material);
+    ~Mesh();
 
+    void initialize();
+    void destroy();
+
+    void draw();
+private:
+    std::vector<Vertex>& vertices_;
+    Buffer vertex_buffer_;
+    std::vector<uint32_t>& indices_;
+    Buffer index_buffer_;
+    Material* material_;
+
+    struct {
+        uint32_t material_flags;
+    } uniform_data_;
+    ConstBuffer uniform_buffer_;
 };
