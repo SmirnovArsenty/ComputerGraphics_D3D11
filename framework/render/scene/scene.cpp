@@ -84,9 +84,9 @@ R"(struct VS_IN
 struct PS_IN
 {
     float4 pos : SV_POSITION;
-    float3 model_pos;
-    float3 normal;
-    float2 uv;
+    float3 model_pos : POSITION;
+    float3 normal : NORMAL;
+    float2 uv : TEXCOORD;
 };
 
 struct PS_OUT
@@ -117,12 +117,11 @@ cbuffer MeshData : register(b2)
 Texture2D<float4> diffuse   : register(t0);
 Texture2D<float4> specular  : register(t1);
 Texture2D<float4> ambient   : register(t2);
-
-SamplerState sampler : register(s0);
+SamplerState tex_sampler : register(s0);
 
 PS_IN VSMain(VS_IN input)
 {
-    PS_IN res = (PI_IN)0;
+    PS_IN res = (PS_IN)0;
     res.model_pos = mul(transform, float4(input.pos_uv_x.xyz, 1.f)).xyz;
     res.pos = mul(view_proj, float4(res.model_pos, 1.f));
     res.normal = mul(inverse_transpose_transform, float4(input.normal_uv_y.xyz, 0.f)).xyz;
@@ -140,18 +139,19 @@ PS_OUT PSMain(PS_IN input)
 
     float4 diffuse_color = (0).xxxx;
     if (material_flags & 1) {
-        diffuse_color = diffuse.Sample(sampler, input.uv);
+        diffuse_color = diffuse.Sample(tex_sampler, input.uv);
     }
     float4 specular_color = (0).xxxx;
     if (material_flags & 2) {
-        specular_color = specular.Sample(sampler, input.uv);
+        specular_color = specular.Sample(tex_sampler, input.uv);
     }
     float4 ambient_color = (0).xxxx;
     if (material_flags & 4) {
-        ambient_color = ambient.Sample(sampler, input.uv);
+        ambient_color = ambient.Sample(tex_sampler, input.uv);
     }
 
-    return diffuse_color; // debug
+    res.color = diffuse_color; // debug
+    return res;
 }
 
 )";

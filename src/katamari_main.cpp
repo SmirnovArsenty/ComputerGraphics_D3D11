@@ -12,8 +12,6 @@
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, char*, int)
 {
-    auto model = Model("resources/models/Sponza_FBX/Sponza.fbx");
-    model.load();
     auto katamari = std::make_unique<KatamariComponent>();
     Game::inst()->add_component(katamari.get());
 

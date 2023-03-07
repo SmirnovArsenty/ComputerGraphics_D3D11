@@ -56,5 +56,6 @@ void Mesh::draw()
 
     material_->bind();
 
+    auto context = Game::inst()->render().context();
     context->DrawIndexed(index_buffer_.count(), 0, 0);
 }

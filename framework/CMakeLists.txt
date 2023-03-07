@@ -80,7 +80,6 @@ source_group("win32" FILES ${group_win32})
 add_library(framework STATIC ${sources})
 target_link_libraries(framework
     assimp
-    tinygltf
     directxtk
     imgui
 )
