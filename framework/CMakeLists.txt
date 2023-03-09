@@ -88,3 +88,5 @@ target_link_libraries(framework
 target_include_directories(framework
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/
 )
+add_custom_command(TARGET framework POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:assimp> ${CMAKE_CURRENT_SOURCE_DIR}/..)
