@@ -6,7 +6,7 @@
 #include "scene.h"
 #include "model.h"
 
-Scene::Scene()
+Scene::Scene() : uniform_data_{}
 {
 }
 
@@ -36,6 +36,11 @@ void Scene::initialize()
     D3D11_CHECK(device->CreateRasterizerState(&rast_desc, &rasterizer_state_));
 
     uniform_buffer_.initialize(sizeof(uniform_data_), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+
+    assert(lights_.size() > 0);
+    lights_buffer_.initialize(D3D11_BIND_SHADER_RESOURCE,
+                                lights_.data(), sizeof(Light), static_cast<UINT>(lights_.size()),
+                                D3D11_USAGE_IMMUTABLE, (D3D11_CPU_ACCESS_FLAG)0, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
 }
 
 void Scene::destroy()
@@ -46,6 +51,8 @@ void Scene::destroy()
         model = nullptr;
     }
     models_.clear();
+    lights_.clear();
+    lights_buffer_.destroy();
     uniform_buffer_.destroy();
     rasterizer_state_->Release();
     rasterizer_state_ = nullptr;
@@ -60,6 +67,11 @@ void Scene::add_model(const std::string& filename)
     models_.push_back(new_model);
 }
 
+void Scene::add_light(Light light)
+{
+    lights_.push_back(light);
+}
+
 void Scene::update()
 {
     auto camera = Game::inst()->render().camera();
@@ -67,6 +79,7 @@ void Scene::update()
     uniform_data_.camera_pos = camera->position();
     uniform_data_.camera_dir = camera->direction();
     uniform_data_.time += Game::inst()->delta_time();
+    uniform_data_.lights_count = static_cast<uint32_t>(lights_.size());
 }
 
 void Scene::draw()
@@ -75,9 +88,12 @@ void Scene::draw()
 
     shader_.use();
     context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context->RSSetState(rasterizer_state_);
 
     uniform_buffer_.update_data(&uniform_data_);
     uniform_buffer_.bind(0);
+
+    lights_buffer_.bind(0);
 
     for (auto& model : models_) {
         model->draw();
@@ -110,7 +126,7 @@ cbuffer SceneData : register(b0)
     float3 camera_pos;
     float time;
     float3 camera_dir;
-    float dummy;
+    uint lights_count;
 };
 
 cbuffer ModelData : register(b1)
@@ -124,9 +140,22 @@ cbuffer MeshData : register(b2)
     uint material_flags;
 };
 
-Texture2D<float4> diffuse   : register(t0);
-Texture2D<float4> specular  : register(t1);
-Texture2D<float4> ambient   : register(t2);
+struct Light
+{
+    uint type;
+    float3 color;
+
+    float3 origin;
+    float angle;
+
+    float3 direction;
+    float dummy;
+};
+
+StructuredBuffer<Light> lights : register(t0);
+Texture2D<float4> diffuse   : register(t1);
+Texture2D<float4> specular  : register(t2);
+Texture2D<float4> ambient   : register(t3);
 SamplerState tex_sampler : register(s0);
 
 PS_IN VSMain(VS_IN input)
@@ -160,8 +189,22 @@ PS_OUT PSMain(PS_IN input)
         ambient_color = ambient.Sample(tex_sampler, input.uv);
     }
 
-    res.color = diffuse_color; // debug
+    if ((material_flags & 7) == 0) {
+        res.color.xyz = float3(1.f, 0.f, 1.f);
+    } else {
+        res.color = (0).xxxx;
+    }
+    for (uint i = 0; i < lights_count; ++i)
+    {
+        float3 diffuse_component = lights[i].color * diffuse_color.xyz * dot(normal, -normalize(lights[i].direction));
+        float3 reflected_view = reflect(normalize(lights[i].direction), normal);
+        float cos_phi = dot(reflected_view, normalize(camera_pos - pos));
+        float3 specular_component = lights[i].color * specular_color * pow(cos_phi, 5);
+
+        res.color += float4(diffuse_component, 0.f) + float4(specular_component, 0.f);
+    }
+    res.color += ambient_color * 0.2f;
+    res.color.w = 1.f; // TODO: look up to opacity map
     return res;
 }
-
 )";

@@ -14,7 +14,7 @@ Buffer::~Buffer()
     assert(resource_ == nullptr);
 }
 
-void Buffer::initialize(D3D11_BIND_FLAG bind_flags, void* data, UINT stride, UINT count, D3D11_USAGE usage, D3D11_CPU_ACCESS_FLAG cpu_access)
+void Buffer::initialize(D3D11_BIND_FLAG bind_flags, void* data, UINT stride, UINT count, D3D11_USAGE usage, D3D11_CPU_ACCESS_FLAG cpu_access, D3D11_RESOURCE_MISC_FLAG misc)
 {
     assert(resource_ == nullptr);
     if (bind_flags == D3D11_BIND_CONSTANT_BUFFER) {
@@ -31,8 +31,8 @@ void Buffer::initialize(D3D11_BIND_FLAG bind_flags, void* data, UINT stride, UIN
     buffer_desc_.Usage = usage;
     buffer_desc_.BindFlags = bind_flags;
     buffer_desc_.CPUAccessFlags = cpu_access;
-    buffer_desc_.MiscFlags = 0;
-    buffer_desc_.StructureByteStride = 0;
+    buffer_desc_.MiscFlags = misc;
+    buffer_desc_.StructureByteStride = misc == D3D11_RESOURCE_MISC_BUFFER_STRUCTURED ? stride : 0;
     buffer_desc_.ByteWidth = stride * count;
 
     subresource_data_.pSysMem = data;
@@ -41,6 +41,18 @@ void Buffer::initialize(D3D11_BIND_FLAG bind_flags, void* data, UINT stride, UIN
 
     auto device = Game::inst()->render().device();
     D3D11_CHECK(device->CreateBuffer(&buffer_desc_, &subresource_data_, &resource_));
+
+    // create shader resource view
+    if (bind_flags == D3D11_BIND_SHADER_RESOURCE)
+    {
+        D3D11_SHADER_RESOURCE_VIEW_DESC resource_view_desc;
+        resource_view_desc.BufferEx.FirstElement = 0;
+        resource_view_desc.BufferEx.NumElements = count;
+        resource_view_desc.BufferEx.Flags = 0;
+        resource_view_desc.Format = DXGI_FORMAT_UNKNOWN;
+        resource_view_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+        D3D11_CHECK(device->CreateShaderResourceView(resource_, &resource_view_desc, &resource_view_));
+    }
 }
 
 void Buffer::set_name(const std::string& name)
@@ -70,12 +82,17 @@ void Buffer::bind(UINT slot)
     {
         context->VSSetConstantBuffers(slot, 1, &resource_);
         context->PSSetConstantBuffers(slot, 1, &resource_);
+    } else if (buffer_desc_.BindFlags == D3D11_BIND_SHADER_RESOURCE)
+    {
+        context->VSSetShaderResources(slot, 1, &resource_view_);
+        context->PSSetShaderResources(slot, 1, &resource_view_);
     }
 }
 
 void Buffer::destroy()
 {
     SAFE_RELEASE(resource_);
+    SAFE_RELEASE(resource_view_);
 }
 
 UINT Buffer::count() const

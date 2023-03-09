@@ -40,7 +40,7 @@ public:
     void move_up(float delta);
 
 private:
-    Vector3 position_{ -200.f, 0.f, 0.f };
+    Vector3 position_{ -20.f, 0.f, 0.f };
     Vector3 forward_{ 1.f, 0.f, 0.f };
     CameraType type_{ CameraType::perspective };
     bool focus_{ false };

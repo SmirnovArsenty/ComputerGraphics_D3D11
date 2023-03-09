@@ -35,13 +35,13 @@ void Material::bind()
 
     } else { // Phong
         if (diffuse_) {
-            diffuse_->bind(0);
+            diffuse_->bind(1);
         }
         if (specular_) {
-            specular_->bind(1);
+            specular_->bind(2);
         }
         if (ambient_) {
-            ambient_->bind(2);
+            ambient_->bind(3);
         }
     }
 }

@@ -3,7 +3,7 @@
 #include "mesh.h"
 
 Mesh::Mesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, Material* material) :
-    vertices_{ vertices }, indices_{ indices }, material_{ material }
+    vertices_{ vertices }, indices_{ indices }, material_{ material }, uniform_data_{}
 {
 }
 
@@ -25,6 +25,7 @@ void Mesh::initialize()
     index_buffer_.set_name("index_buffer");
 #endif
 
+    uniform_data_.material_flags = 0;
     if (material_->get_diffuse()) {
         uniform_data_.material_flags |= 1 << 0;
     }

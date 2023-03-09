@@ -35,6 +35,8 @@ set(group_render_resource
 )
 
 set(group_render_scene
+    render/scene/light.cpp
+    render/scene/light.h
     render/scene/material.cpp
     render/scene/material.h
     render/scene/mesh.cpp
