@@ -1,10 +1,11 @@
 #include <cassert>
 
-#include "WICTextureLoader.h"
+#include <WICTextureLoader.h>
 using namespace DirectX;
 
 #include "core/game.h"
 #include "render/render.h"
+#include "render/d3d11_common.h"
 #include "texture.h"
 
 Texture::Texture()
@@ -20,12 +21,13 @@ void Texture::load(const std::string& path)
     auto context = Game::inst()->render().context();
     std::wstring filenamew(path.begin(), path.end());
     CreateWICTextureFromFile(device, filenamew.c_str(), (ID3D11Resource**)&texture_, &resource_view_);
+
+    assert(texture_ != nullptr);
+    assert(resource_view_ != nullptr);
 }
 
 void Texture::initialize(uint32_t width, uint32_t height, DXGI_FORMAT format, void* pixel_data)
 {
-    HRESULT hr;
-    auto device = Game::inst()->render().device();
     D3D11_TEXTURE2D_DESC desc;
     desc.Width = width;
     desc.Height = height;
@@ -45,16 +47,21 @@ void Texture::initialize(uint32_t width, uint32_t height, DXGI_FORMAT format, vo
     subresourceData.SysMemPitch = width * 4;
     subresourceData.SysMemSlicePitch = width * height * 4;
 
-    hr = device->CreateTexture2D(&desc, &subresourceData, &texture_);
-    assert(!FAILED(hr));
-    hr = device->CreateShaderResourceView(texture_, nullptr, &resource_view_);
-    assert(!FAILED(hr));
+    auto device = Game::inst()->render().device();
+    D3D11_CHECK(device->CreateTexture2D(&desc, &subresourceData, &texture_));
+    D3D11_CHECK(device->CreateShaderResourceView(texture_, nullptr, &resource_view_));
+
+    assert(texture_ != nullptr);
+    assert(resource_view_ != nullptr);
 }
 
 void Texture::destroy()
 {
     texture_->Release();
     texture_ = nullptr;
+
+    resource_view_->Release();
+    resource_view_ = nullptr;
 }
 
 void Texture::bind(UINT slot)

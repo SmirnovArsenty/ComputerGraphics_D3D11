@@ -48,15 +48,15 @@ void Model::unload()
 
 void Model::set_transform(Vector3 position, Vector3 scale, Quaternion rotation)
 {
-    // uniform_data_.transform = ;
+    uniform_data_.transform = Matrix::CreateFromQuaternion(rotation) * Matrix::CreateScale(scale) * Matrix::CreateTranslation(position);
     uniform_data_.inverse_transpose_transform = uniform_data_.transform.Invert().Transpose();
-    uniform_buffer_.update_data(&uniform_data_);
 }
 
 void Model::draw()
 {
     Annotation annotation("draw:" + filename_);
 
+    uniform_buffer_.update_data(&uniform_data_);
     uniform_buffer_.bind(1);
 
     for (auto& mesh : meshes_) {
@@ -115,7 +115,7 @@ void Model::load_mesh(aiMesh* mesh, const aiScene* scene)
         auto mat = scene->mMaterials[mesh->mMaterialIndex];
         material = new Material(mat->GetName().C_Str());
 
-        auto load_texture = [&scene](aiString& str) -> Texture* {
+        auto load_texture = [this, &scene](aiString& str) -> Texture* {
             auto texture = new Texture();
             auto embedded_texture = scene->GetEmbeddedTexture(str.C_Str());
             if (embedded_texture != nullptr) {
@@ -123,7 +123,8 @@ void Model::load_mesh(aiMesh* mesh, const aiScene* scene)
                     texture->initialize(embedded_texture->mWidth, embedded_texture->mHeight, DXGI_FORMAT_B8G8R8A8_UNORM, embedded_texture->pcData);
                 }
             } else {
-                texture->load(str.C_Str());
+                auto model_path = filename_.substr(0, filename_.find_last_of('/') + 1);
+                texture->load((model_path + str.C_Str()).c_str());
             }
             return texture;
         };
@@ -150,5 +151,10 @@ void Model::load_mesh(aiMesh* mesh, const aiScene* scene)
         }
     }
 
-    meshes_.push_back(new Mesh(vertices, indices, material));
+    {
+        material->initialize();
+        auto new_mesh = new Mesh(vertices, indices, material);
+        new_mesh->initialize();
+        meshes_.push_back(new_mesh);
+    }
 }

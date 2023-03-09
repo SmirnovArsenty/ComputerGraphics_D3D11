@@ -19,7 +19,7 @@ Mesh::~Mesh()
 void Mesh::initialize()
 {
     vertex_buffer_.initialize(D3D11_BIND_VERTEX_BUFFER, vertices_.data(), sizeof(vertices_[0]), static_cast<UINT>(vertices_.size()));
-    index_buffer_.initialize(D3D11_BIND_INDEX_BUFFER, vertices_.data(), sizeof(vertices_[0]), static_cast<UINT>(vertices_.size()));
+    index_buffer_.initialize(D3D11_BIND_INDEX_BUFFER, indices_.data(), sizeof(indices_[0]), static_cast<UINT>(indices_.size()));
 #ifndef NDEBUG
     vertex_buffer_.set_name("vertex_buffer");
     index_buffer_.set_name("index_buffer");
@@ -43,6 +43,7 @@ void Mesh::initialize()
 
 void Mesh::destroy()
 {
+    uniform_buffer_.destroy();
     index_buffer_.destroy();
     vertex_buffer_.destroy();
 }

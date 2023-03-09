@@ -33,6 +33,7 @@ private:
 
     struct {
         uint32_t material_flags;
+        float dummy[3];
     } uniform_data_;
     ConstBuffer uniform_buffer_;
 };

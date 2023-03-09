@@ -28,18 +28,24 @@ void Scene::initialize()
     shader_.set_name("scene_draw_shader");
 #endif
 
-    CD3D11_RASTERIZER_DESC rastDesc = {};
-    rastDesc.CullMode = D3D11_CULL_NONE;
-    rastDesc.FillMode = D3D11_FILL_SOLID;
+    CD3D11_RASTERIZER_DESC rast_desc = {};
+    rast_desc.CullMode = D3D11_CULL_NONE;
+    rast_desc.FillMode = D3D11_FILL_SOLID;
 
     auto device = Game::inst()->render().device();
-    D3D11_CHECK(device->CreateRasterizerState(&rastDesc, &rasterizer_state_));
+    D3D11_CHECK(device->CreateRasterizerState(&rast_desc, &rasterizer_state_));
 
     uniform_buffer_.initialize(sizeof(uniform_data_), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 }
 
 void Scene::destroy()
 {
+    for (auto& model : models_) {
+        model->unload();
+        delete model;
+        model = nullptr;
+    }
+    models_.clear();
     uniform_buffer_.destroy();
     rasterizer_state_->Release();
     rasterizer_state_ = nullptr;
@@ -48,7 +54,10 @@ void Scene::destroy()
 
 void Scene::add_model(const std::string& filename)
 {
-    models_.push_back(new Model(filename));
+    auto new_model = new Model(filename);
+    new_model->load();
+    new_model->set_transform(Vector3(0.f, 0.f, 0.f), Vector3(1.f, 1.f, 1.f), Quaternion::Identity);
+    models_.push_back(new_model);
 }
 
 void Scene::update()
@@ -67,6 +76,7 @@ void Scene::draw()
     shader_.use();
     context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+    uniform_buffer_.update_data(&uniform_data_);
     uniform_buffer_.bind(0);
 
     for (auto& model : models_) {

@@ -1,5 +1,6 @@
 #include "core/game.h"
 #include "render/render.h"
+#include "render/d3d11_common.h"
 
 #include "material.h"
 #include "render/resource/texture.h"
@@ -14,7 +15,7 @@ Material::~Material()
 
 void Material::initialize()
 {
-    D3D11_SAMPLER_DESC sampler_desc;
+    D3D11_SAMPLER_DESC sampler_desc{};
     sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
     sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
     sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -22,7 +23,7 @@ void Material::initialize()
     sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
     sampler_desc.MinLOD = 0;
     sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
-    Game::inst()->render().device()->CreateSamplerState(&sampler_desc, &sampler_state_);
+    D3D11_CHECK(Game::inst()->render().device()->CreateSamplerState(&sampler_desc, &sampler_state_));
 }
 
 void Material::bind()
@@ -32,10 +33,16 @@ void Material::bind()
 
     if (is_pbr()) {
 
-    } else {
-        diffuse_->bind(0);
-        specular_->bind(1);
-        ambient_->bind(2);
+    } else { // Phong
+        if (diffuse_) {
+            diffuse_->bind(0);
+        }
+        if (specular_) {
+            specular_->bind(1);
+        }
+        if (ambient_) {
+            ambient_->bind(2);
+        }
     }
 }
 

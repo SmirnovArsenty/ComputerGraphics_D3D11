@@ -103,5 +103,5 @@ target_link_libraries(katamari
     framework
 )
 set_property(TARGET katamari PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-# add_custom_command(TARGET katamari POST_BUILD
-#                     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:katamari> ${CMAKE_CURRENT_SOURCE_DIR})
+add_custom_command(TARGET katamari POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:katamari> ${CMAKE_CURRENT_SOURCE_DIR})

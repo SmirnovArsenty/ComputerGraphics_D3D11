@@ -91,6 +91,7 @@ void ConstBuffer::initialize(UINT size, D3D11_USAGE usage, D3D11_CPU_ACCESS_FLAG
     buffer_desc_.MiscFlags = 0;
     buffer_desc_.StructureByteStride = 0;
     buffer_desc_.ByteWidth = size;
+    assert(size >= 16);
 
     auto device = Game::inst()->render().device();
     D3D11_CHECK(device->CreateBuffer(&buffer_desc_, nullptr, &resource_));
