@@ -1,5 +1,3 @@
-#include <directxmath.h>
-
 #include "render/render.h"
 #include "core/game.h"
 #include "render/d3d11_common.h"

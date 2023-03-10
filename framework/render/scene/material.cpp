@@ -32,7 +32,29 @@ void Material::bind()
     context->PSSetSamplers(0, 1, &sampler_state_);
 
     if (is_pbr()) {
+        if (base_color_) {
+            base_color_->bind(1);
+        }
 
+        if (normal_camera_) {
+            normal_camera_->bind(2);
+        }
+
+        if (emission_color_) {
+            emission_color_->bind(3);
+        }
+
+        if (metalness_) {
+            metalness_->bind(4);
+        }
+
+        if (diffuse_roughness_) {
+            diffuse_roughness_->bind(5);
+        }
+
+        if (ambient_occlusion_) {
+            ambient_occlusion_->bind(6);
+        }
     } else { // Phong
         if (diffuse_) {
             diffuse_->bind(1);

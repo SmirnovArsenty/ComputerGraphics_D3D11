@@ -1,6 +1,9 @@
 #include <cassert>
+#include <limits>
 
 #include <assimp/Importer.hpp>
+
+#define NOMINMAX
 
 #include "core/game.h"
 #include "render/render.h"
@@ -15,7 +18,9 @@
 Model::Model(const std::string& filename) :
     filename_{ filename },
     meshes_{},
-    uniform_data_{ Matrix::Identity, Matrix::Identity }
+    uniform_data_{ Matrix::Identity, Matrix::Identity },
+    min_{ std::numeric_limits<float>::max() },
+    max_{ std::numeric_limits<float>::min() }
 {
 }
 
@@ -28,6 +33,13 @@ void Model::load()
     auto scene = importer.ReadFile(filename_, aiProcess_Triangulate | aiProcess_ConvertToLeftHanded);
     assert(scene != nullptr);
     load_node(scene->mRootNode, scene);
+
+    // centrate all meshes
+    for (auto& mesh : meshes_)
+    {
+        mesh->centrate((max_ + min_) / 2);
+        mesh->initialize();
+    }
 
     uniform_buffer_.initialize(sizeof(uniform_data_), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 }
@@ -46,10 +58,49 @@ void Model::unload()
     meshes_.clear();
 }
 
-void Model::set_transform(Vector3 position, Vector3 scale, Quaternion rotation)
+void Model::set_position(Vector3 in_position)
 {
-    uniform_data_.transform = Matrix::CreateFromQuaternion(rotation) * Matrix::CreateScale(scale) * Matrix::CreateTranslation(position);
+    uniform_data_.transform = Matrix::CreateFromQuaternion(rotation()) * Matrix::CreateScale(scale()) * Matrix::CreateTranslation(in_position);
     uniform_data_.inverse_transpose_transform = uniform_data_.transform.Invert().Transpose();
+}
+
+void Model::set_scale(Vector3 in_scale)
+{
+    uniform_data_.transform = Matrix::CreateFromQuaternion(rotation()) * Matrix::CreateScale(in_scale) * Matrix::CreateTranslation(position());
+    uniform_data_.inverse_transpose_transform = uniform_data_.transform.Invert().Transpose();
+}
+
+void Model::set_rotation(Quaternion in_rotation)
+{
+    uniform_data_.transform = Matrix::CreateFromQuaternion(in_rotation) * Matrix::CreateScale(scale()) * Matrix::CreateTranslation(position());
+    uniform_data_.inverse_transpose_transform = uniform_data_.transform.Invert().Transpose();
+}
+
+Vector3 Model::position()
+{
+    Vector3 ret_position;
+    Vector3 ret_scale;
+    Quaternion ret_rotation;
+    uniform_data_.transform.Decompose(ret_scale, ret_rotation, ret_position);
+    return ret_position;
+}
+
+Vector3 Model::scale()
+{
+    Vector3 ret_position;
+    Vector3 ret_scale;
+    Quaternion ret_rotation;
+    uniform_data_.transform.Decompose(ret_scale, ret_rotation, ret_position);
+    return ret_scale;
+}
+
+Quaternion Model::rotation()
+{
+    Vector3 ret_position;
+    Vector3 ret_scale;
+    Quaternion ret_rotation;
+    uniform_data_.transform.Decompose(ret_scale, ret_rotation, ret_position);
+    return ret_rotation;
 }
 
 void Model::draw()
@@ -62,6 +113,30 @@ void Model::draw()
     for (auto& mesh : meshes_) {
         mesh->draw();
     }
+}
+
+Vector3 Model::min()
+{
+    Vector3 ret_position;
+    Vector3 ret_scale;
+    Quaternion ret_rotation;
+    uniform_data_.transform.Decompose(ret_scale, ret_rotation, ret_position);
+    return min_ * ret_scale;
+}
+
+Vector3 Model::max()
+{
+    Vector3 ret_position;
+    Vector3 ret_scale;
+    Quaternion ret_rotation;
+    uniform_data_.transform.Decompose(ret_scale, ret_rotation, ret_position);
+    return max_ * ret_scale;
+}
+
+float Model::radius()
+{
+    Vector3 diag = max() - min();
+    return diag.Length() / 2;
 }
 
 // private
@@ -99,6 +174,27 @@ void Model::load_mesh(aiMesh* mesh, const aiScene* scene)
         }
 
         vertices.push_back(vertex);
+
+        // update extents
+        if (min_.x > mesh->mVertices[i].x) {
+            min_.x = mesh->mVertices[i].x;
+        }
+        if (min_.y > mesh->mVertices[i].y) {
+            min_.y = mesh->mVertices[i].y;
+        }
+        if (min_.z > mesh->mVertices[i].z) {
+            min_.z = mesh->mVertices[i].z;
+        }
+
+        if (max_.x < mesh->mVertices[i].x) {
+            max_.x = mesh->mVertices[i].x;
+        }
+        if (max_.y < mesh->mVertices[i].y) {
+            max_.y = mesh->mVertices[i].y;
+        }
+        if (max_.z < mesh->mVertices[i].z) {
+            max_.z = mesh->mVertices[i].z;
+        }
     }
 
     for (uint32_t i = 0; i < mesh->mNumFaces; i++) {
@@ -154,7 +250,7 @@ void Model::load_mesh(aiMesh* mesh, const aiScene* scene)
     {
         material->initialize();
         auto new_mesh = new Mesh(vertices, indices, material);
-        new_mesh->initialize();
+        // new_mesh->initialize();
         meshes_.push_back(new_mesh);
     }
 }

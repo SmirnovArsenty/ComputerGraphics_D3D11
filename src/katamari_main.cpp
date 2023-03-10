@@ -1,6 +1,3 @@
-#include <Windows.h>
-#include <dxgidebug.h>
-
 #include "core/game.h"
 #include "render/scene/model.h"
 #include "components/katamari/katamari_component.h"

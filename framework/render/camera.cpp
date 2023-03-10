@@ -32,7 +32,11 @@ void Camera::pitch(float delta) // vertical
     Vector3 right = forward_.Cross(up);
     up = forward_.Cross(right);
 
-    forward_ += up * delta;
+    if (focus_) {
+        forward_ -= up * delta;
+    } else {
+        forward_ += up * delta;
+    }
     forward_.Normalize();
     if (focus_) {
         position_ = focus_target_ - forward_ * focus_distance_;
@@ -44,7 +48,11 @@ void Camera::yaw(float delta) // horizontal
     Vector3 up(0.f, 1.f, 0.f);
     Vector3 right = up.Cross(forward_);
 
-    forward_ += right * delta;
+    if (focus_) {
+        forward_ -= right * delta;
+    } else {
+        forward_ += right * delta;
+    }
     forward_.Normalize();
     if (focus_) {
         position_ = focus_target_ - forward_ * focus_distance_;
@@ -61,14 +69,18 @@ void Camera::set_type(Camera::CameraType type)
     type_ = type;
 }
 
-void Camera::focus(Vector3 target)
+void Camera::focus(Vector3 target, float min_distance)
 {
     focus_target_ = target;
     forward_ = focus_target_ - position_;
     forward_.Normalize();
     if (!focus_)
     {
+        focus_min_distance_ = abs(min_distance);
         focus_distance_ = (position_ - target).Length();
+        if (focus_distance_ < focus_min_distance_) {
+            focus_distance_ = focus_min_distance_;
+        }
     }
     position_ = focus_target_ - forward_ * focus_distance_;
 
@@ -113,8 +125,6 @@ const Matrix Camera::proj() const
         }
         case CameraType::orthographic:
         {
-            RECT rc;
-            GetWindowRect(Game::inst()->win().window(), &rc);
             return Matrix::CreateOrthographic(width, height, near_plane, far_plane);
         }
         default:
@@ -140,11 +150,27 @@ const Vector3& Camera::direction() const
     return forward_;
 }
 
+Vector3 Camera::right() const
+{
+    Vector3 up(0.f, 1.f, 0.f);
+    return forward_.Cross(up);
+}
+
+Vector3 Camera::up() const
+{
+    Vector3 up(0.f, 1.f, 0.f);
+    Vector3 right = forward_.Cross(up);
+    return forward_.Cross(right);
+}
+
 void Camera::move_forward(float delta)
 {
     if (focus_)
     {
         focus_distance_ -= delta;
+        if (focus_distance_ < focus_min_distance_) {
+            focus_distance_ = focus_min_distance_;
+        }
         position_ = focus_target_ - forward_ * focus_distance_;
     }
     else

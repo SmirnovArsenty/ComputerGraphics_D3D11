@@ -24,7 +24,7 @@ public:
     CameraType type() const;
     void set_type(CameraType type);
 
-    void focus(Vector3 target);
+    void focus(Vector3 target, float min_distance = 0.f);
     void reset_focus();
 
     const Matrix view() const;
@@ -33,6 +33,9 @@ public:
 
     const Vector3& position() const;
     const Vector3& direction() const;
+
+    Vector3 right() const;
+    Vector3 up() const;
 
     // update camera position
     void move_forward(float delta);
@@ -45,5 +48,6 @@ private:
     CameraType type_{ CameraType::perspective };
     bool focus_{ false };
     Vector3 focus_target_{ 0.f, 0.f, 0.f };
-    float focus_distance_;
+    float focus_min_distance_{ 0.f };
+    float focus_distance_{ 0.f };
 };

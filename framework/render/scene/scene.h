@@ -22,7 +22,7 @@ public:
 
     // TODO: load scene from xml description
 
-    void add_model(const std::string& filename);
+    void add_model(class Model* model);
 
     void add_light(Light light);
 

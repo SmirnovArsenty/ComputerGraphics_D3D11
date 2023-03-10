@@ -1,6 +1,3 @@
-#include <Windows.h>
-#include <dxgidebug.h>
-
 #include "core/game.h"
 #include "components/triangle/triangle_component.h"
 

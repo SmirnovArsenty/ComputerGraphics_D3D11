@@ -24,16 +24,19 @@ public:
     void destroy();
 
     void draw();
+
+    void centrate(Vector3 center);
 private:
-    std::vector<Vertex>& vertices_;
+    std::vector<Vertex> vertices_;
     Buffer vertex_buffer_;
-    std::vector<uint32_t>& indices_;
+    std::vector<uint32_t> indices_;
     Buffer index_buffer_;
     Material* material_;
 
     struct {
+        uint32_t is_pbr;
         uint32_t material_flags;
-        float dummy[3];
+        float dummy[2];
     } uniform_data_;
     ConstBuffer uniform_buffer_;
 };

@@ -5,6 +5,9 @@
 using namespace DirectX::SimpleMath;
 
 #include "component/game_component.h"
+
+#include "render/scene/model.h"
+
 #include "render/resource/buffer.h"
 #include "render/resource/shader.h"
 
@@ -22,4 +25,14 @@ public:
     void destroy_resources() override;
 private:
     class Scene* scene_{ nullptr };
+
+    struct AttachedEntity
+    {
+        Model* model;
+        Vector3 attach_position;
+        Quaternion initial_rotation;
+    };
+    std::vector<AttachedEntity> attached_models_;
+    std::vector<Model*> free_models_;
+    Model* plane_;
 };

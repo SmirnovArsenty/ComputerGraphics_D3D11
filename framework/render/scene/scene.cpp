@@ -45,11 +45,6 @@ void Scene::initialize()
 
 void Scene::destroy()
 {
-    for (auto& model : models_) {
-        model->unload();
-        delete model;
-        model = nullptr;
-    }
     models_.clear();
     lights_.clear();
     lights_buffer_.destroy();
@@ -59,12 +54,9 @@ void Scene::destroy()
     shader_.destroy();
 }
 
-void Scene::add_model(const std::string& filename)
+void Scene::add_model(Model* model)
 {
-    auto new_model = new Model(filename);
-    new_model->load();
-    new_model->set_transform(Vector3(0.f, 0.f, 0.f), Vector3(1.f, 1.f, 1.f), Quaternion::Identity);
-    models_.push_back(new_model);
+    models_.push_back(model);
 }
 
 void Scene::add_light(Light light)
@@ -137,7 +129,9 @@ cbuffer ModelData : register(b1)
 
 cbuffer MeshData : register(b2)
 {
+    uint is_pbr;
     uint material_flags;
+    float2 MeshData_dummy;
 };
 
 struct Light
@@ -152,10 +146,13 @@ struct Light
     float dummy;
 };
 
-StructuredBuffer<Light> lights : register(t0);
-Texture2D<float4> diffuse   : register(t1);
-Texture2D<float4> specular  : register(t2);
-Texture2D<float4> ambient   : register(t3);
+StructuredBuffer<Light> lights  : register(t0);
+Texture2D<float4> texture_1     : register(t1);
+Texture2D<float4> texture_2     : register(t2);
+Texture2D<float4> texture_3     : register(t3);
+Texture2D<float4> texture_4     : register(t4);
+Texture2D<float4> texture_5     : register(t5);
+Texture2D<float4> texture_6     : register(t6);
 SamplerState tex_sampler : register(s0);
 
 PS_IN VSMain(VS_IN input)
@@ -176,35 +173,79 @@ PS_OUT PSMain(PS_IN input)
     float3 normal = normalize(input.normal);
     float3 pos = input.model_pos;
 
-    float4 diffuse_color = (0).xxxx;
-    if (material_flags & 1) {
-        diffuse_color = diffuse.Sample(tex_sampler, input.uv);
-    }
-    float4 specular_color = (0).xxxx;
-    if (material_flags & 2) {
-        specular_color = specular.Sample(tex_sampler, input.uv);
-    }
-    float4 ambient_color = (0).xxxx;
-    if (material_flags & 4) {
-        ambient_color = ambient.Sample(tex_sampler, input.uv);
-    }
-
-    if ((material_flags & 7) == 0) {
-        res.color.xyz = float3(1.f, 0.f, 1.f);
-    } else {
-        res.color = (0).xxxx;
-    }
-    for (uint i = 0; i < lights_count; ++i)
+    if (is_pbr)
     {
-        float3 diffuse_component = lights[i].color * diffuse_color.xyz * dot(normal, -normalize(lights[i].direction));
-        float3 reflected_view = reflect(normalize(lights[i].direction), normal);
-        float cos_phi = dot(reflected_view, normalize(camera_pos - pos));
-        float3 specular_component = lights[i].color * specular_color * pow(cos_phi, 5);
+        float4 base_color = (0).xxxx;
+        float4 normal_camera = (0).xxxx;
+        float4 emission_color = (0).xxxx;
+        float4 metalness = (0).xxxx;
+        float4 diffuse_roughness = (0).xxxx;
+        float4 ambient_occlusion = (0).xxxx;
 
-        res.color += float4(diffuse_component, 0.f) + float4(specular_component, 0.f);
+        if (material_flags & 1) {
+            base_color = texture_1.Sample(tex_sampler, input.uv);
+        }
+        if (material_flags & 2) {
+            normal_camera = texture_2.Sample(tex_sampler, input.uv);
+        }
+        if (material_flags & 4) {
+            emission_color = texture_3.Sample(tex_sampler, input.uv);
+        }
+        if (material_flags & 8) {
+            metalness = texture_4.Sample(tex_sampler, input.uv);
+        }
+        if (material_flags & 16) {
+            diffuse_roughness = texture_5.Sample(tex_sampler, input.uv);
+        }
+        if (material_flags & 32) {
+            ambient_occlusion = texture_6.Sample(tex_sampler, input.uv);
+        }
+
+        res.color.xyz = base_color.xyz;
+        res.color.w = 1.f;
     }
-    res.color += ambient_color * 0.2f;
-    res.color.w = 1.f; // TODO: look up to opacity map
+    else
+    { // Phong light model
+        float4 diffuse_color = (0).xxxx;
+        float4 specular_color = (0).xxxx;
+        float4 ambient_color = (0).xxxx;
+
+        if (material_flags & 1) {
+            diffuse_color = texture_1.Sample(tex_sampler, input.uv);
+        }
+        if (material_flags & 2) {
+            specular_color = texture_2.Sample(tex_sampler, input.uv);
+        }
+        if (material_flags & 4) {
+            ambient_color = texture_3.Sample(tex_sampler, input.uv);
+        }
+
+        if ((material_flags & 7) == 0) { // no material provided - draw magenta
+            diffuse_color = float4(1.f, 0.f, 1.f, 1.f);
+            specular_color = (0.5).xxxx;
+            ambient_color = (0.1).xxxx;
+        }
+
+        res.color = (0).xxxx;
+        for (uint i = 0; i < lights_count; ++i)
+        {
+            float3 diffuse_component = lights[i].color * diffuse_color.xyz * max(dot(normal, -normalize(lights[i].direction)), 0);
+            float3 reflected_view = reflect(normalize(lights[i].direction), normal);
+            float cos_phi = dot(reflected_view, normalize(camera_pos - pos));
+            float3 specular_component = lights[i].color * specular_color * pow(max(cos_phi, 0), 5);
+
+            res.color.xyz += diffuse_component + specular_component;
+        }
+        if (dot(ambient_color, ambient_color) > 0) {
+            res.color += ambient_color * 0.2f;
+        } else {
+            res.color += diffuse_color * 0.2f;
+        }
+        res.color.w = 1.f; // TODO: look up to opacity map
+    }
+
+    // gamma correction
+    res.color.xyz = pow(abs(res.color.xyz), 1/2.2f);
     return res;
 }
 )";

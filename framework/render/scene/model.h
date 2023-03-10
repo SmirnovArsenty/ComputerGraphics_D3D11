@@ -1,5 +1,6 @@
 #pragma once
 
+#define NOMINMAX
 #include <string>
 #include <vector>
 
@@ -20,14 +21,24 @@ public:
     void load();
     void unload();
 
-    void set_transform(Vector3 position, Vector3 scale, Quaternion rotation);
+    void set_position(Vector3 position);
+    void set_scale(Vector3 scale);
+    void set_rotation(Quaternion rotation);
+
+    Vector3 position();
+    Vector3 scale();
+    Quaternion rotation();
+
     void draw();
+
+    Vector3 min();
+    Vector3 max();
+    float radius();
 
 private:
     // https://github.com/assimp/assimp/blob/master/samples/SimpleTexturedDirectx11/SimpleTexturedDirectx11/ModelLoader.cpp
     void load_node(aiNode* node, const aiScene* scene);
     void load_mesh(aiMesh* mesh, const aiScene* scene);
-    void load_material(aiMaterial* material, const aiScene* scene);
 
     const std::string filename_; // model filename
 
@@ -38,4 +49,8 @@ private:
         Matrix transform;
         Matrix inverse_transpose_transform;
     } uniform_data_;
+
+    // model extents
+    Vector3 min_;
+    Vector3 max_;
 };
