@@ -51,7 +51,7 @@ void Render::initialize()
         create_device_flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
-#if 0
+#if 1
         // choose best adapter by memory
         Microsoft::WRL::ComPtr<IDXGIFactory> factory;
         D3D11_CHECK(CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&factory));
@@ -196,6 +196,9 @@ void Render::prepare_frame()
 
         if (keyboard.shift.pressed) {
             camera_move_delta *= 1e1f;
+        }
+        if (keyboard.ctrl.pressed) {
+            camera_move_delta *= 1e-1f;
         }
         camera_->move_forward(camera_move_delta * keyboard.w.pressed);
         camera_->move_right(camera_move_delta * keyboard.d.pressed);

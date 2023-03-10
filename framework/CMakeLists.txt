@@ -23,12 +23,28 @@ set(group_render
 )
 
 set(group_render_resource
+    render/resource/resource_manager.cpp
+    render/resource/resource_manager.h
+
     render/resource/buffer.cpp
     render/resource/buffer.h
     render/resource/shader.cpp
     render/resource/shader.h
     render/resource/texture.cpp
     render/resource/texture.h
+)
+
+set(group_render_scene
+    render/scene/light.cpp
+    render/scene/light.h
+    render/scene/material.cpp
+    render/scene/material.h
+    render/scene/mesh.cpp
+    render/scene/mesh.h
+    render/scene/model.cpp
+    render/scene/model.h
+    render/scene/scene.cpp
+    render/scene/scene.h
 )
 
 set(group_component_common
@@ -47,6 +63,7 @@ set(sources
 
     ${group_render}
     ${group_render_resource}
+    ${group_render_scene}
 
     ${group_component_common}
 
@@ -58,15 +75,18 @@ set(sources
 source_group("core" FILES ${group_core})
 source_group("render" FILES ${group_render})
 source_group("render/resource" FILES ${group_render_resource})
+source_group("render/scene" FILES ${group_render_scene})
 source_group("component/common" FILES ${group_component_common})
 source_group("win32" FILES ${group_win32})
 
 add_library(framework STATIC ${sources})
 target_link_libraries(framework
-    tinygltf
+    assimp
     directxtk
     imgui
 )
 target_include_directories(framework
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/
 )
+add_custom_command(TARGET framework POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:assimp> ${CMAKE_CURRENT_SOURCE_DIR}/..)

@@ -1,8 +1,5 @@
-#include <Windows.h>
-#include <dxgidebug.h>
-
 #include "core/game.h"
-#include "components/triangle_component.h"
+#include "components/triangle/triangle_component.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
