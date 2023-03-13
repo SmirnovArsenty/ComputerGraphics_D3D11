@@ -61,17 +61,29 @@ void KatamariComponent::initialize()
         free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
         free_models_.back()->set_position(Vector3(15.f, 0.f, 15.f));
         scene_->add_model(free_models_.back());
+        free_models_.push_back(new Model("./resources/models/Strawberry_FBX/Strawberry_fbx.fbx"));
+        free_models_.back()->set_position(Vector3(15.f, 0.f, 10.f));
+        scene_->add_model(free_models_.back());
+        free_models_.push_back(new Model("./resources/models/GiftBox_FBX/GiftBox_fbx.fbx"));
+        free_models_.back()->set_position(Vector3(30.f, 0.f, 20.f));
+        scene_->add_model(free_models_.back());
+        free_models_.push_back(new Model("./resources/models/Tire_FBX/Tire.fbx"));
+        free_models_.back()->set_position(Vector3(30.f, 0.f, -20.f));
+        free_models_.back()->set_scale(Vector3(0.02f, 0.02f, 0.02f));
+        scene_->add_model(free_models_.back());
     }
 
     for (auto& model : attached_models_) {
         model.model->load();
+        radius_a_ = model.model->radius();
+        radius_b_ = model.model->radius();
+        radius_t_ = 1.f;
         Vector3 pos = model.model->position();
         model.model->set_position(Vector3(pos.x, model.model->radius(), pos.z));
     }
 
     for (auto& model : free_models_) {
         model->load();
-        Vector3 pos = model->position();
     }
 }
 
@@ -151,9 +163,12 @@ void KatamariComponent::update()
     {
         auto& model = free_models_[i];
         Vector3 diff = current_pos - model->position();
-        if (diff.Length() < radius + model->radius())
+        if (diff.Length() < radius + model->radius() && radius >= model->radius())
         {
             attach_index = i;
+            radius_a_ = radius_b_;
+            radius_b_ = radius + model->radius();
+            radius_t_ = 0.f;
             break;
         }
     }
@@ -168,13 +183,20 @@ void KatamariComponent::update()
         Vector3 pos = model.attach_position;
         Quaternion reverse_initial;
         model.initial_rotation.Inverse(reverse_initial);
-        Quaternion model_rotation = reverse_initial* attached_models_[0].model->rotation();
+        Quaternion model_rotation = reverse_initial * attached_models_[0].model->rotation();
         pos = Vector3::Transform(pos, Matrix::CreateFromQuaternion(model_rotation));
         model.model->set_position(current_pos + pos);
         model.model->set_rotation(model_rotation);
     }
 
-    attached_models_[0].model->set_position(Vector3(current_pos.x, radius, current_pos.z));
+    { // lerp radius after attechment
+        if (radius_t_ < 1.f)
+        {
+            radius_t_ += Game::inst()->delta_time();
+            attached_models_[0].model->set_position(
+                Vector3(current_pos.x, radius_a_ * (1 - radius_t_) + radius_b_ * radius_t_, current_pos.z));
+        }
+    }
 
     camera->focus(attached_models_[0].model->position(), attached_models_[0].model->radius());
 }

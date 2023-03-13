@@ -35,4 +35,8 @@ private:
     std::vector<AttachedEntity> attached_models_;
     std::vector<Model*> free_models_;
     Model* plane_;
+
+    float radius_a_;
+    float radius_b_;
+    float radius_t_;
 };
