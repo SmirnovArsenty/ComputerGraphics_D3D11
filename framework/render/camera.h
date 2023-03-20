@@ -16,6 +16,10 @@ public:
     Camera();
     ~Camera();
 
+    float get_near() const;
+    float get_far() const;
+    float get_fov() const;
+
     void set_camera(Vector3 position, Vector3 forward);
 
     void pitch(float delta); // around right vector

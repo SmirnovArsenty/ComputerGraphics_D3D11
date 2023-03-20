@@ -15,6 +15,8 @@ public:
 
     void bind(UINT slot);
 
+    ID3D11Resource* resource() const;
+
 private:
     ID3D11Texture2D* texture_{ nullptr };
     ID3D11ShaderResourceView* resource_view_{ nullptr };

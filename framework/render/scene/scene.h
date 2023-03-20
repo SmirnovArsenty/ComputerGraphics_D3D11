@@ -30,7 +30,6 @@ public:
     void draw();
 private:
     std::vector<class Model*> models_;
-    // passes to GPU, don't use pointer
     std::vector<Light> lights_;
 
     ConstBuffer uniform_buffer_;
@@ -45,7 +44,13 @@ private:
     Shader shader_;
     static std::string shader_source_;
 
+    ConstBuffer light_data_buffer_;
+    Shader light_shader_;
+    static std::string light_shader_source_;
+
     Buffer lights_buffer_;
 
     ID3D11RasterizerState* rasterizer_state_{ nullptr };
+
+    ID3D11RenderTargetView* render_target_view_{};
 };

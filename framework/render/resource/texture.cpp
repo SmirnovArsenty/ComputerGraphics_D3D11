@@ -69,3 +69,8 @@ void Texture::bind(UINT slot)
     auto context = Game::inst()->render().context();
     context->PSSetShaderResources(slot, 1, &resource_view_);
 }
+
+ID3D11Resource* Texture::resource() const
+{
+    return (ID3D11Resource*)texture_;
+}

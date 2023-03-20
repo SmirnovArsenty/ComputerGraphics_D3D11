@@ -4,6 +4,11 @@
 
 #include <SimpleMath.h>
 using namespace DirectX::SimpleMath;
+#include <d3d11.h>
+
+#include "render/resource/texture.h"
+#include "render/resource/shader.h"
+#include "render/resource/buffer.h"
 
 class Light
 {
@@ -16,10 +21,22 @@ public:
         spot,
         area,
     };
-    
+
+    struct LightData {
+        Type type;
+        Vector3 color;
+
+        Vector3 origin;
+        float angle;
+
+        Vector3 direction;
+        float dummy;
+    };
 
     Light();
     ~Light();
+
+    LightData& get_data();
 
     void set_type(Type type);
     Type get_type() const;
@@ -32,14 +49,13 @@ public:
     void setup_spot(Vector3 origin, Vector3 direction, float angle);
     void setup_area(); // TODO
 
-private:
-    Type type_;
-    Vector3 color_;
-    // 4 bytes
+    uint32_t get_depth_map_count() const;
+    ID3D11DepthStencilView* get_depth_map(uint32_t index);
 
-    Vector3 origin_;
-    float angle_;
-    // 4 bytes
-    Vector3 direction_;
-    float dummy_;
+private:
+    constexpr static uint32_t shadow_cascade_count_ = 3;
+
+    LightData data_;
+
+    ID3D11DepthStencilView** ds_view_{ nullptr };
 };

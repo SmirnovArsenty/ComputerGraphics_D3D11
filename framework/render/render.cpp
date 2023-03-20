@@ -222,9 +222,10 @@ void Render::prepare_frame()
     }
 }
 
-void Render::prepare_resources()
+void Render::prepare_resources() const
 {
     context_->OMSetRenderTargets(1, &render_target_view_, depth_stencil_view_);
+
     float clear_color[4] = { 0.f, 0.f, 0.f, 1.f };
     context_->ClearRenderTargetView(render_target_view_, clear_color);
 

@@ -15,6 +15,31 @@ Camera::~Camera()
 {
 }
 
+float Camera::get_near() const
+{
+    constexpr float near_plane = 1.f;
+    return near_plane;
+}
+
+float Camera::get_far() const
+{
+    constexpr float far_plane = 1e4f;
+    return far_plane;
+}
+
+float Camera::get_fov() const
+{
+    RECT rc;
+    GetWindowRect(Game::inst()->win().window(), &rc);
+    float width = float(rc.right - rc.left);
+    float height = float(rc.bottom - rc.top);
+    float aspect_ratio = width / height;
+    constexpr float fov = 60 / 57.2957795131f; // default fov - 60 degree
+    auto vfov = static_cast<float>(2 * atan(tan(fov / 2) * (1.0 / aspect_ratio)));
+    float field_of_view = aspect_ratio > 1.0f ? fov : vfov;
+    return field_of_view;
+}
+
 void Camera::set_camera(Vector3 position, Vector3 forward)
 {
     position_ = position;
@@ -107,25 +132,17 @@ const Matrix Camera::proj() const
     GetWindowRect(Game::inst()->win().window(), &rc);
     float width = float(rc.right - rc.left);
     float height = float(rc.bottom - rc.top);
-    constexpr float near_plane = 1.f;
-    constexpr float far_plane = 1e4f;
 
     switch (type_)
     {
         case CameraType::perspective:
         {
             float aspect_ratio = width / height;
-            // default fov - 60 degree
-            constexpr float fov = 60 / 57.2957795131f;
-            auto vfov = static_cast<float>(2 * atan(tan(fov / 2) * (1.0 / aspect_ratio)));
-
-            float field_of_view = aspect_ratio > 1.0f ? fov : vfov;
-            // using reversed depth buffer, so far_plane and near_plane are swapped
-            return Matrix::CreatePerspectiveFieldOfView(field_of_view, aspect_ratio, near_plane, far_plane);
+            return Matrix::CreatePerspectiveFieldOfView(get_fov(), aspect_ratio, get_near(), get_far());
         }
         case CameraType::orthographic:
         {
-            return Matrix::CreateOrthographic(width, height, near_plane, far_plane);
+            return Matrix::CreateOrthographic(width, height, get_near(), get_far());
         }
         default:
         {
