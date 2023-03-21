@@ -2,11 +2,16 @@
 #include "render/render.h"
 #include "render/d3d11_common.h"
 
-#include "material.h"
 #include "render/resource/texture.h"
+#include "material.h"
+
+Texture Material::default_texture_;
 
 Material::Material(const std::string& path) : path_{ path }
 {
+    if (default_texture_.resource() == nullptr) {
+        default_texture_.initialize(512, 512, DXGI_FORMAT_R8G8B8A8_UNORM, nullptr);
+    }
 }
 
 Material::~Material()
@@ -34,36 +39,54 @@ void Material::bind()
     if (is_pbr()) {
         if (base_color_) {
             base_color_->bind(1);
+        } else {
+            default_texture_.bind(1);
         }
 
         if (normal_camera_) {
             normal_camera_->bind(2);
+        } else {
+            default_texture_.bind(2);
         }
 
         if (emission_color_) {
             emission_color_->bind(3);
+        } else {
+            default_texture_.bind(3);
         }
 
         if (metalness_) {
             metalness_->bind(4);
+        } else {
+            default_texture_.bind(4);
         }
 
         if (diffuse_roughness_) {
             diffuse_roughness_->bind(5);
+        } else {
+            default_texture_.bind(5);
         }
 
         if (ambient_occlusion_) {
             ambient_occlusion_->bind(6);
+        } else {
+            default_texture_.bind(6);
         }
     } else { // Phong
         if (diffuse_) {
             diffuse_->bind(1);
+        } else {
+            default_texture_.bind(1);
         }
         if (specular_) {
             specular_->bind(2);
+        } else {
+            default_texture_.bind(2);
         }
         if (ambient_) {
             ambient_->bind(3);
+        } else {
+            default_texture_.bind(3);
         }
     }
 }
@@ -75,8 +98,10 @@ bool Material::is_pbr()
 
 void Material::destroy()
 {
-    sampler_state_->Release();
-    sampler_state_ = nullptr;
+    if (sampler_state_ != nullptr) {
+        sampler_state_->Release();
+        sampler_state_ = nullptr;
+    }
 
 #define DESTROY_MATERIAL_TYPE(material_type)    \
     if (material_type##_ != nullptr) {          \

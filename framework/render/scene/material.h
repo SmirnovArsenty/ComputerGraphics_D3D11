@@ -54,4 +54,6 @@ private:
 #undef MATERIAL_TYPE_PRIVATE_DECL
 
     ID3D11SamplerState* sampler_state_{ nullptr };
+
+    static Texture default_texture_;
 };

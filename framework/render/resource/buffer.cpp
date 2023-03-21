@@ -82,7 +82,8 @@ void Buffer::bind(UINT slot)
     {
         context->VSSetConstantBuffers(slot, 1, &resource_);
         context->PSSetConstantBuffers(slot, 1, &resource_);
-    } else if (buffer_desc_.BindFlags == D3D11_BIND_SHADER_RESOURCE)
+    }
+    else if (buffer_desc_.BindFlags == D3D11_BIND_SHADER_RESOURCE)
     {
         context->VSSetShaderResources(slot, 1, &resource_view_);
         context->PSSetShaderResources(slot, 1, &resource_view_);

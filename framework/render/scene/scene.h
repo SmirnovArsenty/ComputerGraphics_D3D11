@@ -24,13 +24,13 @@ public:
 
     void add_model(class Model* model);
 
-    void add_light(Light light);
+    void add_light(Light* light);
 
     void update();
     void draw();
 private:
     std::vector<class Model*> models_;
-    std::vector<Light> lights_;
+    std::vector<Light*> lights_;
 
     ConstBuffer uniform_buffer_;
     struct

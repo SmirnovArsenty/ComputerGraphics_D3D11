@@ -50,6 +50,7 @@ public:
     void setup_area(); // TODO
 
     uint32_t get_depth_map_count() const;
+    const Texture& get_depth_buffer(uint32_t index);
     ID3D11DepthStencilView* get_depth_map(uint32_t index);
 
 private:
@@ -57,5 +58,6 @@ private:
 
     LightData data_;
 
-    ID3D11DepthStencilView** ds_view_{ nullptr };
+    Texture ds_buffer_[shadow_cascade_count_];
+    ID3D11DepthStencilView* ds_view_[shadow_cascade_count_ ]{ nullptr };
 };

@@ -21,8 +21,8 @@ void Scene::initialize()
         { "POSITION_UV_X", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "NORMAL_UV_Y", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
-    light_shader_.set_vs_shader_from_memory(shader_source_, "VSMain", nullptr, nullptr);
-    light_shader_.set_ps_shader_from_memory(shader_source_, "PSMain", nullptr, nullptr);
+    light_shader_.set_vs_shader_from_memory(light_shader_source_, "VSMain", nullptr, nullptr);
+    light_shader_.set_ps_shader_from_memory(light_shader_source_, "PSMain", nullptr, nullptr);
     light_shader_.set_input_layout(inputs, std::size(inputs));
 #ifndef NDEBUG
     light_shader_.set_name("scene_light_shader");
@@ -47,11 +47,11 @@ void Scene::initialize()
     assert(lights_.size() > 0);
     std::vector<Light::LightData> lights_data;
     for (auto& light : lights_) {
-        lights_data.push_back(light.get_data());
+        lights_data.push_back(light->get_data());
     }
     assert(lights_data.size() > 0);
     lights_buffer_.initialize(D3D11_BIND_SHADER_RESOURCE,
-                                lights_data.data(), sizeof(Light), static_cast<UINT>(lights_data.size()),
+                                lights_data.data(), sizeof(Light::LightData), static_cast<UINT>(lights_data.size()),
                                 D3D11_USAGE_IMMUTABLE, (D3D11_CPU_ACCESS_FLAG)0, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
 
     light_data_buffer_.initialize(sizeof(Light::LightData), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
@@ -92,7 +92,7 @@ void Scene::add_model(Model* model)
     models_.push_back(model);
 }
 
-void Scene::add_light(Light light)
+void Scene::add_light(Light* light)
 {
     lights_.push_back(light);
 }
@@ -115,31 +115,28 @@ void Scene::draw()
     context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     context->RSSetState(rasterizer_state_);
 
-    uniform_buffer_.update_data(&uniform_data_);
-    uniform_buffer_.bind(0);
-
     // calculate shadows
     light_shader_.use();
     for (auto& light : lights_)
     {
-        uint32_t depth_map_count = light.get_depth_map_count();
+        uint32_t depth_map_count = light->get_depth_map_count();
         for (uint32_t i = 0; i < depth_map_count; ++i) {
-            context->OMSetRenderTargets(0, nullptr, light.get_depth_map(i));
-            context->ClearDepthStencilView(light.get_depth_map(i), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0xFF);
+            context->OMSetRenderTargets(0, nullptr, light->get_depth_map(i));
+            context->ClearDepthStencilView(light->get_depth_map(i), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0xFF);
 
-            Light::LightData& light_data = light.get_data();
+            Light::LightData& light_data = light->get_data();
             switch (light_data.type)
             {
             case Light::Type::direction:
             {
-                light_data.origin = camera->position() - light_data.direction;
+                light_data.origin = camera->position();
                 break;
             }
             default:
             break;
             }
             light_data_buffer_.update_data(&light_data);
-            light_data_buffer_.bind(1);
+            light_data_buffer_.bind(0);
 
             for (auto& model : models_) {
                 model->draw();
@@ -150,10 +147,22 @@ void Scene::draw()
     // restore default render target and depth stencil
     Game::inst()->render().prepare_resources();
 
+    context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context->RSSetState(rasterizer_state_);
+
     // draw models
     shader_.use();
+    uniform_buffer_.update_data(&uniform_data_);
     uniform_buffer_.bind(0);
     lights_buffer_.bind(0);
+
+    ID3D11ShaderResourceView* tex_array[3] = {
+        lights_[0]->get_depth_buffer(0).view(),
+        lights_[0]->get_depth_buffer(1).view(),
+        lights_[0]->get_depth_buffer(2).view()
+    };
+
+    context->PSSetShaderResources(10, 3, tex_array);
 
     for (auto& model : models_) {
         model->draw();
@@ -223,6 +232,8 @@ Texture2D<float4> texture_5     : register(t5);
 Texture2D<float4> texture_6     : register(t6);
 SamplerState tex_sampler : register(s0);
 
+Texture2D<float> shadow_cascade[3] : register(t10);
+
 PS_IN VSMain(VS_IN input)
 {
     PS_IN res = (PS_IN)0;
@@ -241,6 +252,15 @@ PS_OUT PSMain(PS_IN input)
     float3 normal = normalize(input.normal);
     float3 pos = input.model_pos;
 
+    float depth0 = shadow_cascade[0].Sample(tex_sampler, float2(0, 0));
+    float depth1 = shadow_cascade[1].Sample(tex_sampler, float2(0, 0));
+    float depth2 = shadow_cascade[2].Sample(tex_sampler, float2(0, 0));
+    if (depth0 < 0 || depth1 < 0 || depth2 < 0)
+    {
+        res.color.xyz = float3(1, 0, 0);
+        res.color.w = 1.f;
+        return res;
+    }
     if (is_pbr)
     {
         float4 base_color = (0).xxxx;
@@ -398,11 +418,15 @@ PS_IN VSMain(VS_IN input)
 {
     PS_IN res = (PS_IN)0;
     res.position = mul(transform, float4(input.pos_uv_x.xyz, 1.f));
-    res.position = 
+    res.position = mul(look_at_matrix(origin, origin - direction * 2.f, float3(0, 1, 0)), res.position);
+    if (type == 1) // direction
+    {
+        res.position = mul(ortho_proj(1000, 1000, 1000, 0.1), res.position);
+    }
     return res;
 }
 
-float4 PSMain(PS_IN input) : SV_Target0
+void PSMain(PS_IN input)
 {
 }
 )";

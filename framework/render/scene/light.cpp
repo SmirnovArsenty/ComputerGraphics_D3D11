@@ -12,21 +12,13 @@ Light::Light() : data_{ Type::undefined }
 
     // setup depth stencil array
     {
-        Texture shadow[shadow_cascade_count_]; // allocate on stack - faster
         for (uint32_t i = 0; i < shadow_cascade_count_; ++i) {
-            shadow[i].initialize(512, 512, DXGI_FORMAT_D32_FLOAT, nullptr);
-        }
+            ds_buffer_[i].initialize(512, 512, DXGI_FORMAT_R32_TYPELESS, nullptr, D3D11_BIND_FLAG(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE));
 
-        ds_view_ = new ID3D11DepthStencilView*[shadow_cascade_count_];
-        for (uint32_t i = 0; i < shadow_cascade_count_; ++i) {
             D3D11_DEPTH_STENCIL_VIEW_DESC ds_desc{};
             ds_desc.Format = DXGI_FORMAT_D32_FLOAT;
             ds_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-            device->CreateDepthStencilView(shadow[i].resource(), &ds_desc, &(ds_view_[i]));
-        }
-
-        for (uint32_t i = 0; i < shadow_cascade_count_; ++i) {
-            shadow[i].destroy();
+            device->CreateDepthStencilView(ds_buffer_[i].resource(), &ds_desc, &(ds_view_[i]));
         }
     }
 }
@@ -37,12 +29,13 @@ Light::~Light()
         for (uint32_t i = 0; i < shadow_cascade_count_; ++i) {
             ds_view_[i]->Release();
         }
-        delete[] ds_view_;
-        ds_view_ = nullptr;
+    }
+    for (uint32_t i = 0; i < shadow_cascade_count_; ++i) {
+        ds_buffer_[i].destroy();
     }
 }
 
-const Light::LightData& Light::get_data()
+Light::LightData& Light::get_data()
 {
     return data_;
 }
@@ -96,6 +89,11 @@ void Light::setup_area()
 uint32_t Light::get_depth_map_count() const
 {
     return shadow_cascade_count_;
+}
+
+const Texture& Light::get_depth_buffer(uint32_t index)
+{
+    return ds_buffer_[index];
 }
 
 ID3D11DepthStencilView* Light::get_depth_map(uint32_t index)
