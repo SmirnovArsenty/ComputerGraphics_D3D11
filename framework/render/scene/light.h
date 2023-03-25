@@ -13,6 +13,8 @@ using namespace DirectX::SimpleMath;
 class Light
 {
 public:
+    constexpr static uint32_t shadow_cascade_count = 3;
+
     enum class Type : uint32_t
     {
         undefined = 0,
@@ -33,10 +35,16 @@ public:
         float dummy;
     };
 
+    struct CascadeData {
+        Matrix transform[shadow_cascade_count];
+        Vector4 distances;
+    };
+
     Light();
     ~Light();
 
     LightData& get_data();
+    CascadeData& get_cascade_data();
 
     void set_type(Type type);
     Type get_type() const;
@@ -50,14 +58,16 @@ public:
     void setup_area(); // TODO
 
     uint32_t get_depth_map_count() const;
-    const Texture& get_depth_buffer(uint32_t index);
-    ID3D11DepthStencilView* get_depth_map(uint32_t index);
-
+    ID3D11Texture2D* get_depth_buffer();
+    ID3D11ShaderResourceView* get_depth_view();
+    ID3D11DepthStencilView* get_depth_map();
+    void set_transform(uint32_t index, Matrix transform);
+    Matrix get_transform(uint32_t index);
 private:
-    constexpr static uint32_t shadow_cascade_count_ = 3;
-
     LightData data_;
+    CascadeData cascade_data_;
 
-    Texture ds_buffer_[shadow_cascade_count_];
-    ID3D11DepthStencilView* ds_view_[shadow_cascade_count_ ]{ nullptr };
+    ID3D11Texture2D* ds_buffer_{ nullptr };
+    ID3D11ShaderResourceView* ds_buffer_view_{ nullptr };
+    ID3D11DepthStencilView* ds_view_{ nullptr };
 };

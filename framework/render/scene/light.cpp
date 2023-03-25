@@ -1,6 +1,7 @@
 #include "core/game.h"
 #include "render/render.h"
 #include "render/camera.h"
+#include "render/d3d11_common.h"
 
 #include "light.h"
 
@@ -12,32 +13,60 @@ Light::Light() : data_{ Type::undefined }
 
     // setup depth stencil array
     {
-        for (uint32_t i = 0; i < shadow_cascade_count_; ++i) {
-            ds_buffer_[i].initialize(512, 512, DXGI_FORMAT_R32_TYPELESS, nullptr, D3D11_BIND_FLAG(D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE));
+        D3D11_TEXTURE2D_DESC depth_desc{};
+        depth_desc.Width = 512;
+        depth_desc.Height = 512;
+        depth_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+        depth_desc.ArraySize = shadow_cascade_count;
+        depth_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
+        depth_desc.MipLevels = 1;
+        depth_desc.SampleDesc.Count = 1;
+        depth_desc.SampleDesc.Quality = 0;
+        D3D11_CHECK(device->CreateTexture2D(&depth_desc, nullptr, &ds_buffer_));
 
-            D3D11_DEPTH_STENCIL_VIEW_DESC ds_desc{};
-            ds_desc.Format = DXGI_FORMAT_D32_FLOAT;
-            ds_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-            device->CreateDepthStencilView(ds_buffer_[i].resource(), &ds_desc, &(ds_view_[i]));
-        }
+        D3D11_DEPTH_STENCIL_VIEW_DESC ds_desc{};
+        ds_desc.Format = DXGI_FORMAT_D32_FLOAT;
+        ds_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+        ds_desc.Texture2DArray.MipSlice = 0;
+        ds_desc.Texture2DArray.FirstArraySlice = 0;
+        ds_desc.Texture2DArray.ArraySize = shadow_cascade_count;
+        D3D11_CHECK(device->CreateDepthStencilView(ds_buffer_, &ds_desc, &ds_view_));
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+        srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
+        srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+        srv_desc.Texture2DArray.MostDetailedMip = 0;
+        srv_desc.Texture2DArray.MipLevels = 1;
+        srv_desc.Texture2DArray.FirstArraySlice = 0;
+        srv_desc.Texture2DArray.ArraySize = 3;
+        D3D11_CHECK(device->CreateShaderResourceView(ds_buffer_, &srv_desc, &ds_buffer_view_));
     }
 }
 
 Light::~Light()
 {
-    if (ds_view_ != nullptr) {
-        for (uint32_t i = 0; i < shadow_cascade_count_; ++i) {
-            ds_view_[i]->Release();
-        }
+    if (ds_buffer_view_ != nullptr) {
+        ds_buffer_view_->Release();
+        ds_buffer_view_ = nullptr;
     }
-    for (uint32_t i = 0; i < shadow_cascade_count_; ++i) {
-        ds_buffer_[i].destroy();
+    if (ds_view_ != nullptr) {
+        ds_view_->Release();
+        ds_view_ = nullptr;
+    }
+    if (ds_buffer_ != nullptr) {
+        ds_buffer_->Release();
+        ds_buffer_ = nullptr;
     }
 }
 
 Light::LightData& Light::get_data()
 {
     return data_;
+}
+
+Light::CascadeData& Light::get_cascade_data()
+{
+    return cascade_data_;
 }
 
 void Light::set_type(Light::Type type)
@@ -88,17 +117,31 @@ void Light::setup_area()
 
 uint32_t Light::get_depth_map_count() const
 {
-    return shadow_cascade_count_;
+    return shadow_cascade_count;
 }
 
-const Texture& Light::get_depth_buffer(uint32_t index)
+ID3D11Texture2D* Light::get_depth_buffer()
 {
-    return ds_buffer_[index];
+    return ds_buffer_;
 }
 
-ID3D11DepthStencilView* Light::get_depth_map(uint32_t index)
+ID3D11ShaderResourceView* Light::get_depth_view()
 {
-    assert(index < shadow_cascade_count_);
+    return ds_buffer_view_;
+}
+
+ID3D11DepthStencilView* Light::get_depth_map()
+{
     assert(ds_view_ != nullptr);
-    return ds_view_[index];
+    return ds_view_;
+}
+
+void Light::set_transform(uint32_t index, Matrix transform)
+{
+    cascade_data_.transform[index] = transform;
+}
+
+Matrix Light::get_transform(uint32_t index)
+{
+    return cascade_data_.transform[index];
 }

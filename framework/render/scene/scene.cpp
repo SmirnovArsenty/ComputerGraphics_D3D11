@@ -22,7 +22,7 @@ void Scene::initialize()
         { "NORMAL_UV_Y", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
     light_shader_.set_vs_shader_from_memory(light_shader_source_, "VSMain", nullptr, nullptr);
-    light_shader_.set_ps_shader_from_memory(light_shader_source_, "PSMain", nullptr, nullptr);
+    light_shader_.set_gs_shader_from_memory(light_shader_source_, "GSMain", nullptr, nullptr);
     light_shader_.set_input_layout(inputs, std::size(inputs));
 #ifndef NDEBUG
     light_shader_.set_name("scene_light_shader");
@@ -55,6 +55,7 @@ void Scene::initialize()
                                 D3D11_USAGE_IMMUTABLE, (D3D11_CPU_ACCESS_FLAG)0, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
 
     light_data_buffer_.initialize(sizeof(Light::LightData), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+    light_transform_buffer_.initialize(sizeof(Light::CascadeData), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
     // render target view
     ID3D11Texture2D* rtv_tex{ nullptr };
@@ -78,6 +79,7 @@ void Scene::destroy()
 {
     models_.clear();
     lights_.clear();
+    light_transform_buffer_.destroy();
     light_data_buffer_.destroy();
     lights_buffer_.destroy();
     uniform_buffer_.destroy();
@@ -115,32 +117,86 @@ void Scene::draw()
     context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     context->RSSetState(rasterizer_state_);
 
+    D3D11_VIEWPORT viewport = {};
+    viewport.Width = 512;
+    viewport.Height = 512;
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+    viewport.MinDepth = 0;
+    viewport.MaxDepth = 1.0f;
+
     // calculate shadows
+    std::vector<Vector4> frustum_corners;
+    frustum_corners.reserve(8);
+    Matrix inv_view_proj = camera->view_proj().Invert();
+    for (uint32_t x = 0; x < 2; ++x){
+        for (uint32_t y = 0; y < 2; ++y) {
+            for (uint32_t z = 0; z < 2; ++z) {
+                Vector4 pt = Vector4::Transform(
+                                Vector4(2.f * x - 1.f, 2.f * y - 1.f, z * 1.f, 1.f),
+                                inv_view_proj);
+                frustum_corners.push_back(pt / pt.w);
+            }
+        }
+    }
+    Vector3 center = Vector3::Zero;
+    for (const auto &v : frustum_corners) {
+        center += Vector3(v.x, v.y, v.z);
+    }
+    center /= float(frustum_corners.size());
+
     light_shader_.use();
     for (auto& light : lights_)
     {
         uint32_t depth_map_count = light->get_depth_map_count();
+        context->OMSetRenderTargets(0, nullptr, light->get_depth_map());
+        context->ClearDepthStencilView(light->get_depth_map(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0xFF);
+        context->RSSetViewports(1, &viewport);
         for (uint32_t i = 0; i < depth_map_count; ++i) {
-            context->OMSetRenderTargets(0, nullptr, light->get_depth_map(i));
-            context->ClearDepthStencilView(light->get_depth_map(i), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0xFF);
-
             Light::LightData& light_data = light->get_data();
-            switch (light_data.type)
-            {
-            case Light::Type::direction:
-            {
-                light_data.origin = camera->position();
-                break;
-            }
-            default:
-            break;
-            }
             light_data_buffer_.update_data(&light_data);
             light_data_buffer_.bind(0);
 
-            for (auto& model : models_) {
-                model->draw();
+            Matrix light_view = Matrix::Identity;
+            light_view = Matrix::CreateLookAt(center - light_data.direction, center, Vector3::Up);
+
+            Matrix light_proj = Matrix::Identity;
+            float minX = std::numeric_limits<float>::max();
+            float maxX = std::numeric_limits<float>::lowest();
+            float minY = std::numeric_limits<float>::max();
+            float maxY = std::numeric_limits<float>::lowest();
+            float minZ = std::numeric_limits<float>::max();
+            float maxZ = std::numeric_limits<float>::lowest();
+            for (auto &v : frustum_corners) {
+                Vector4 trf = Vector4::Transform(v, light_view);
+                minX = std::min(minX, trf.x);
+                maxX = std::max(maxX, trf.x);
+                minY = std::min(minY, trf.y);
+                maxY = std::max(maxY, trf.y);
+                minZ = std::min(minZ, trf.z);
+                maxZ = std::max(maxZ, trf.z);
             }
+            constexpr float zMult = 10.f;
+            minZ = (minZ < 0) ? minZ * zMult : minZ / zMult;
+            maxZ = (maxZ < 0) ? maxZ / zMult : maxZ * zMult;
+            switch (light_data.type)
+            {
+            case Light::Type::direction:
+                light_proj = Matrix::CreateOrthographicOffCenter(minX, maxX, minY, maxY, minZ, maxZ);
+                break;
+            default:
+                light_proj = Matrix::CreatePerspectiveOffCenter(minX, maxX, minY, maxY, minZ, maxZ);
+                break;
+            }
+            Matrix light_transform = light_view * light_proj;
+            light->set_transform(i, light_transform);
+        }
+
+        light_transform_buffer_.update_data(&light->get_cascade_data());
+        light_transform_buffer_.bind(3);
+
+        for (auto& model : models_) {
+            model->draw();
         }
     }
 
@@ -156,13 +212,11 @@ void Scene::draw()
     uniform_buffer_.bind(0);
     lights_buffer_.bind(0);
 
-    ID3D11ShaderResourceView* tex_array[3] = {
-        lights_[0]->get_depth_buffer(0).view(),
-        lights_[0]->get_depth_buffer(1).view(),
-        lights_[0]->get_depth_buffer(2).view()
-    };
+    ID3D11ShaderResourceView* tex_array{ lights_[0]->get_depth_view() };
+    context->PSSetShaderResources(10, 1, &tex_array);
 
-    context->PSSetShaderResources(10, 3, tex_array);
+    light_transform_buffer_.update_data(&lights_[0]->get_cascade_data());
+    light_transform_buffer_.bind(3);
 
     for (auto& model : models_) {
         model->draw();
@@ -232,7 +286,12 @@ Texture2D<float4> texture_5     : register(t5);
 Texture2D<float4> texture_6     : register(t6);
 SamplerState tex_sampler : register(s0);
 
-Texture2D<float> shadow_cascade[3] : register(t10);
+cbuffer CascadeData : register(b3)
+{
+    float4x4 cascade_view_proj[3];
+    float4 distances;
+}
+Texture2DArray<float> shadow_cascade : register(t10);
 
 PS_IN VSMain(VS_IN input)
 {
@@ -252,16 +311,14 @@ PS_OUT PSMain(PS_IN input)
     float3 normal = normalize(input.normal);
     float3 pos = input.model_pos;
 
-    float depth0 = shadow_cascade[0].Sample(tex_sampler, float2(0, 0));
-    float depth1 = shadow_cascade[1].Sample(tex_sampler, float2(0, 0));
-    float depth2 = shadow_cascade[2].Sample(tex_sampler, float2(0, 0));
-    if (depth0 < 0 || depth1 < 0 || depth2 < 0)
-    {
-        res.color.xyz = float3(1, 0, 0);
-        res.color.w = 1.f;
-        return res;
+    float4 light_pos = mul(cascade_view_proj[0], float4(pos, 1.f));
+    float real_depth = light_pos.z;
+    float light_depth = shadow_cascade.Sample(tex_sampler, float3(light_pos.xy, 0));
+    if (real_depth > light_depth)
+    { // shadow
+        res.color = float4(0.2, 0.2, 0.2, 1);
     }
-    if (is_pbr)
+    else if (is_pbr)
     {
         float4 base_color = (0).xxxx;
         float4 normal_camera = (0).xxxx;
@@ -340,18 +397,7 @@ PS_OUT PSMain(PS_IN input)
 
 
 std::string Scene::light_shader_source_ =
-R"(struct VS_IN
-{
-    float4 pos_uv_x : POSITION_UV_X0;
-    float4 normal_uv_y : NORMAL_UV_Y0;
-};
-
-struct PS_IN
-{
-    float4 position : SV_POSITION;
-};
-
-cbuffer LightData : register(b0)
+R"(cbuffer LightData : register(b0)
 {
     uint type;
     float3 color;
@@ -377,56 +423,49 @@ cbuffer MeshData : register(b2)
     float2 MeshData_dummy;
 };
 
-float4x4 axis_matrix(float3 right, float3 up, float3 forward)
+cbuffer CascadeData : register(b3)
 {
-    float3 xaxis = right;
-    float3 yaxis = up;
-    float3 zaxis = forward;
-    return float4x4(
-        xaxis.x, yaxis.x, zaxis.x, 0,
-        xaxis.y, yaxis.y, zaxis.y, 0,
-        xaxis.z, yaxis.z, zaxis.z, 0,
-        0, 0, 0, 1
-    );
+    float4x4 view_proj[3];
+    float4 distances;
 }
 
-float4x4 look_at_matrix(float3 at, float3 eye, float3 up)
+struct VS_IN
 {
-    float3 zaxis = normalize(at - eye);
-    float3 xaxis = normalize(cross(up, zaxis));
-    float3 yaxis = cross(zaxis, xaxis);
-    return axis_matrix(xaxis, yaxis, zaxis);
-}
+    float4 pos_uv_x : POSITION_UV_X0;
+    float4 normal_uv_y : NORMAL_UV_Y0;
+};
 
-float4x4 ortho_proj(float width, float height, float far, float near)
+struct GS_IN
 {
-    return float4x4(2/width, 0, 0, 0,
-                    0, 2/height, 0, 0,
-                    0, 0, -2/(far-near), -(far+near)/(far-near),
-                    0, 0, 0, 1);
-}
+    float4 pos: POSITION;
+};
 
-float4x4 persp_proj(float far, float near)
+GS_IN VSMain(VS_IN input)
 {
-    return float4x4(1, 0, 0, 0,
-                    0, 1, 0, 0,
-                    0, 0, -(far+near)/(far-near), -1,
-                    0, 0, -(far*near)/(far-near), 0);
-}
-
-PS_IN VSMain(VS_IN input)
-{
-    PS_IN res = (PS_IN)0;
-    res.position = mul(transform, float4(input.pos_uv_x.xyz, 1.f));
-    res.position = mul(look_at_matrix(origin, origin - direction * 2.f, float3(0, 1, 0)), res.position);
-    if (type == 1) // direction
-    {
-        res.position = mul(ortho_proj(1000, 1000, 1000, 0.1), res.position);
-    }
+    GS_IN res = (GS_IN)0;
+    res.pos = mul(transform, float4(input.pos_uv_x.xyz, 1.f));
+    // res.position = mul(light_transform, res.position);
     return res;
 }
 
-void PSMain(PS_IN input)
+struct GS_OUT
 {
+    float4 pos : SV_POSITION;
+    uint arr_ind : SV_RenderTargetArrayIndex;
+};
+
+[instance(3)]
+[maxvertexcount(3)]
+void GSMain(triangle GS_IN p[3],
+            in uint id : SV_GSInstanceID,
+            inout TriangleStream<GS_OUT> stream)
+{
+    [unroll]
+    for (int i = 0; i < 3; ++i) {
+        GS_OUT gs = (GS_OUT)0;
+        gs.pos = mul(view_proj[id], float4(p[i].pos.xyz, 1.f));
+        gs.arr_ind = id;
+        stream.Append(gs);
+    }
 }
 )";

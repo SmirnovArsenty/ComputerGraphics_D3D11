@@ -178,18 +178,6 @@ void Render::prepare_frame()
 {
     context_->ClearState();
 
-    RECT rc;
-    GetWindowRect(Game::inst()->win().window(), &rc);
-    D3D11_VIEWPORT viewport = {};
-    viewport.Width = static_cast<float>(rc.right - rc.left);
-    viewport.Height = static_cast<float>(rc.bottom - rc.top);
-    viewport.TopLeftX = 0;
-    viewport.TopLeftY = 0;
-    viewport.MinDepth = 0;
-    viewport.MaxDepth = 1.0f;
-
-    context_->RSSetViewports(1, &viewport);
-
     { // move camera
         float camera_move_delta = Game::inst()->delta_time() * 1e2f;
         const auto& keyboard = Game::inst()->win().input()->keyboard();
@@ -231,6 +219,18 @@ void Render::prepare_resources() const
 
     context_->OMSetDepthStencilState(depth_stencil_state_, 0);
     context_->ClearDepthStencilView(depth_stencil_view_, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0xFF);
+
+    RECT rc;
+    GetWindowRect(Game::inst()->win().window(), &rc);
+    D3D11_VIEWPORT viewport = {};
+    viewport.Width = static_cast<float>(rc.right - rc.left);
+    viewport.Height = static_cast<float>(rc.bottom - rc.top);
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+    viewport.MinDepth = 0;
+    viewport.MaxDepth = 1.0f;
+
+    context_->RSSetViewports(1, &viewport);
 }
 
 void Render::prepare_imgui()

@@ -13,9 +13,15 @@ Shader::~Shader() {}
 void Shader::set_name(const std::string& name)
 {
     std::string vs_name = name + "_vs";
+    std::string gs_name = name + "_gs";
     std::string ps_name = name + "_ps";
     vertex_shader_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(vs_name.size()), vs_name.c_str());
-    pixel_shader_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(ps_name.size()), ps_name.c_str());
+    if (geometry_shader_ != nullptr) {
+        geometry_shader_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(gs_name.size()), gs_name.c_str());
+    }
+    if (pixel_shader_ != nullptr) {
+        pixel_shader_->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(ps_name.size()), ps_name.c_str());
+    }
 
     std::string il_name = name + "_input_layout";
     if (input_layout_ != nullptr) {
@@ -181,6 +187,44 @@ void Shader::set_vs_shader_from_memory(const std::string& data,
                                           nullptr, &vertex_shader_));
 }
 
+void Shader::set_gs_shader_from_memory(const std::string& data,
+                                       const std::string& entrypoint,
+                                       D3D_SHADER_MACRO* macro, ID3DInclude* include)
+{
+    assert(geometry_bc_ == nullptr);
+    assert(geometry_shader_ == nullptr);
+
+    ID3DBlob* error_code = nullptr;
+    unsigned int compile_flags = 0;
+#ifndef NDEBUG
+    compile_flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+    HRESULT status = D3DCompile(data.data(), data.size(), nullptr,
+                                macro, include,
+                                entrypoint.c_str(), "gs_5_0",
+                                compile_flags, 0,
+                                &geometry_bc_, &error_code);
+
+    if (FAILED(status))
+    {
+        if (error_code)
+        {
+            std::stringstream err;
+            err << (char*)(error_code->GetBufferPointer());
+            OutputDebugString(err.str().c_str());
+        }
+        else
+        {
+            OutputDebugString("Missing shader file");
+        }
+        assert(false);
+    }
+    auto device = Game::inst()->render().device();
+    D3D11_CHECK(device->CreateGeometryShader(geometry_bc_->GetBufferPointer(),
+                                             geometry_bc_->GetBufferSize(),
+                                             nullptr, &geometry_shader_));
+}
+
 void Shader::set_ps_shader_from_memory(const std::string& data,
                                        const std::string& entrypoint,
                                        D3D_SHADER_MACRO* macro, ID3DInclude* include)
@@ -236,13 +280,20 @@ void Shader::use()
         context->IASetInputLayout(input_layout_);
     }
     context->VSSetShader(vertex_shader_, nullptr, 0);
-    context->PSSetShader(pixel_shader_, nullptr, 0);
+    context->GSSetShader(geometry_shader_, nullptr, 0);
+    if (pixel_shader_ != nullptr) {
+        context->PSSetShader(pixel_shader_, nullptr, 0);
+    }
 }
 
 void Shader::destroy()
 {
+    SAFE_RELEASE(compute_shader_);
+    SAFE_RELEASE(compute_bc_);
     SAFE_RELEASE(vertex_shader_);
     SAFE_RELEASE(vertex_bc_);
+    SAFE_RELEASE(geometry_shader_);
+    SAFE_RELEASE(geometry_bc_);
     SAFE_RELEASE(pixel_shader_);
     SAFE_RELEASE(pixel_bc_);
 

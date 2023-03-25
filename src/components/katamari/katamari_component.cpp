@@ -19,7 +19,7 @@ void KatamariComponent::initialize()
     static Light sun_light;
     sun_light.set_type(Light::Type::direction);
     sun_light.set_color(Vector3(1.f, 1.f, 1.f));
-    sun_light.setup_direction(Vector3(1.f, -1.f, 1.f));
+    sun_light.setup_direction(Vector3(1.f, -1.f, 0.f));
     scene_->add_light(&sun_light);
     scene_->initialize();
 

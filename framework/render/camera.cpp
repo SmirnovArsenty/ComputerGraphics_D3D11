@@ -17,13 +17,13 @@ Camera::~Camera()
 
 float Camera::get_near() const
 {
-    constexpr float near_plane = 1.f;
+    constexpr float near_plane = .1f;
     return near_plane;
 }
 
 float Camera::get_far() const
 {
-    constexpr float far_plane = 1e4f;
+    constexpr float far_plane = 1e3f;
     return far_plane;
 }
 
