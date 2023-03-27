@@ -57,11 +57,10 @@ public:
     void setup_spot(Vector3 origin, Vector3 direction, float angle);
     void setup_area(); // TODO
 
-    uint32_t get_depth_map_count() const;
     ID3D11Texture2D* get_depth_buffer();
     ID3D11ShaderResourceView* get_depth_view();
     ID3D11DepthStencilView* get_depth_map();
-    void set_transform(uint32_t index, Matrix transform);
+    void set_transform(uint32_t index, Matrix transform, float distance);
     Matrix get_transform(uint32_t index);
 private:
     LightData data_;

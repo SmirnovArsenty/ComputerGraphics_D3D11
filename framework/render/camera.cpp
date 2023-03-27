@@ -6,6 +6,7 @@
 #include "core/game.h"
 #include "win32/win.h"
 #include "camera.h"
+#include "render/scene/light.h"
 
 Camera::Camera()
 {
@@ -155,6 +156,44 @@ const Matrix Camera::proj() const
 const Matrix Camera::view_proj() const
 {
     return view() * proj();
+}
+
+std::vector<Matrix> Camera::cascade_view_proj()
+{
+    std::vector<Matrix> res;
+    res.reserve(Light::shadow_cascade_count);
+
+    float iter = get_far() / Light::shadow_cascade_count;
+    float near_value = get_near();
+    float far_value = iter;
+    for (uint32_t i = 0; i < Light::shadow_cascade_count; ++i)
+    {
+        RECT rc;
+        GetWindowRect(Game::inst()->win().window(), &rc);
+        float width = float(rc.right - rc.left);
+        float height = float(rc.bottom - rc.top);
+        Matrix projection = Matrix::Identity;
+        switch (type_)
+        {
+        case CameraType::perspective:
+        {
+            float aspect_ratio = width / height;
+            projection = Matrix::CreatePerspectiveFieldOfView(get_fov(), aspect_ratio, near_value, far_value);
+        }
+        case CameraType::orthographic:
+        {
+            projection = Matrix::CreateOrthographic(width, height, near_value, far_value);
+        }
+        default:
+        {
+            break;
+        }
+        }
+        res.push_back(view() * projection);
+        near_value += iter;
+        far_value += iter;
+    }
+    return res;
 }
 
 const Vector3& Camera::position() const

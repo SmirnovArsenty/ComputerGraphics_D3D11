@@ -126,39 +126,43 @@ void Scene::draw()
     viewport.MaxDepth = 1.0f;
 
     // calculate shadows
-    std::vector<Vector4> frustum_corners;
-    frustum_corners.reserve(8);
-    Matrix inv_view_proj = camera->view_proj().Invert();
-    for (uint32_t x = 0; x < 2; ++x){
-        for (uint32_t y = 0; y < 2; ++y) {
-            for (uint32_t z = 0; z < 2; ++z) {
-                Vector4 pt = Vector4::Transform(
-                                Vector4(2.f * x - 1.f, 2.f * y - 1.f, z * 1.f, 1.f),
-                                inv_view_proj);
-                frustum_corners.push_back(pt / pt.w);
+    std::vector<Vector4> frustum_corners[Light::shadow_cascade_count];
+    auto view_frustums = camera->cascade_view_proj();
+    for (uint32_t i = 0; i < Light::shadow_cascade_count; ++i) {
+        frustum_corners[i].reserve(8);
+        Matrix inv_view_proj = view_frustums[i].Invert();
+        for (uint32_t x = 0; x < 2; ++x){
+            for (uint32_t y = 0; y < 2; ++y) {
+                for (uint32_t z = 0; z < 2; ++z) {
+                    Vector4 pt = Vector4::Transform(
+                                    Vector4(2.f * x - 1.f, 2.f * y - 1.f, z * 1.f, 1.f),
+                                    inv_view_proj);
+                    frustum_corners[i].push_back(pt / pt.w);
+                }
             }
         }
     }
-    Vector3 center = Vector3::Zero;
-    for (const auto &v : frustum_corners) {
-        center += Vector3(v.x, v.y, v.z);
+    Vector3 center[3]{ Vector3::Zero, Vector3::Zero, Vector3::Zero };
+    for (uint32_t i = 0; i < Light::shadow_cascade_count; ++i) {
+        for (const auto &v : frustum_corners[i]) {
+            center[i] += Vector3(v.x, v.y, v.z);
+        }
+        center[i] /= float(frustum_corners[i].size());
     }
-    center /= float(frustum_corners.size());
 
     light_shader_.use();
     for (auto& light : lights_)
     {
-        uint32_t depth_map_count = light->get_depth_map_count();
         context->OMSetRenderTargets(0, nullptr, light->get_depth_map());
         context->ClearDepthStencilView(light->get_depth_map(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0xFF);
         context->RSSetViewports(1, &viewport);
-        for (uint32_t i = 0; i < depth_map_count; ++i) {
+        for (uint32_t i = 0; i < Light::shadow_cascade_count; ++i) {
             Light::LightData& light_data = light->get_data();
             light_data_buffer_.update_data(&light_data);
             light_data_buffer_.bind(0);
 
             Matrix light_view = Matrix::Identity;
-            light_view = Matrix::CreateLookAt(center - light_data.direction, center, Vector3::Up);
+            light_view = Matrix::CreateLookAt(center[i] - light_data.direction, center[i], Vector3::Up);
 
             Matrix light_proj = Matrix::Identity;
             float minX = std::numeric_limits<float>::max();
@@ -167,7 +171,7 @@ void Scene::draw()
             float maxY = std::numeric_limits<float>::lowest();
             float minZ = std::numeric_limits<float>::max();
             float maxZ = std::numeric_limits<float>::lowest();
-            for (auto &v : frustum_corners) {
+            for (auto &v : frustum_corners[i]) {
                 Vector4 trf = Vector4::Transform(v, light_view);
                 minX = std::min(minX, trf.x);
                 maxX = std::max(maxX, trf.x);
@@ -189,7 +193,7 @@ void Scene::draw()
                 break;
             }
             Matrix light_transform = light_view * light_proj;
-            light->set_transform(i, light_transform);
+            light->set_transform(i, light_transform, (camera->get_far() / Light::shadow_cascade_count) * (i + 1));
         }
 
         light_transform_buffer_.update_data(&light->get_cascade_data());

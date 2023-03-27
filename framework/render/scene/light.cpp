@@ -115,11 +115,6 @@ void Light::setup_area()
     // TODO
 }
 
-uint32_t Light::get_depth_map_count() const
-{
-    return shadow_cascade_count;
-}
-
 ID3D11Texture2D* Light::get_depth_buffer()
 {
     return ds_buffer_;
@@ -136,9 +131,18 @@ ID3D11DepthStencilView* Light::get_depth_map()
     return ds_view_;
 }
 
-void Light::set_transform(uint32_t index, Matrix transform)
+void Light::set_transform(uint32_t index, Matrix transform, float distance)
 {
     cascade_data_.transform[index] = transform;
+    if (index == 0) {
+        cascade_data_.distances.x = distance;
+    } else if (index == 1) {
+        cascade_data_.distances.y = distance;
+    } else if (index == 2) {
+        cascade_data_.distances.z = distance;
+    } else if (index == 3) {
+        cascade_data_.distances.w = distance;
+    }
 }
 
 Matrix Light::get_transform(uint32_t index)
