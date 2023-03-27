@@ -52,6 +52,8 @@ private:
     Buffer lights_buffer_;
 
     ID3D11RasterizerState* rasterizer_state_{ nullptr };
+    ID3D11RasterizerState* light_rasterizer_state_{ nullptr };
+    ID3D11SamplerState* depth_sampler_state_{ nullptr };
 
     ID3D11RenderTargetView* render_target_view_{};
 };

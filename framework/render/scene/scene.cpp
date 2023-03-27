@@ -42,6 +42,12 @@ void Scene::initialize()
     auto device = Game::inst()->render().device();
     D3D11_CHECK(device->CreateRasterizerState(&rast_desc, &rasterizer_state_));
 
+    CD3D11_RASTERIZER_DESC light_rast_desc = {};
+    light_rast_desc.CullMode = D3D11_CULL_NONE;
+    light_rast_desc.FillMode = D3D11_FILL_SOLID;
+    light_rast_desc.DepthBias = 0;
+    D3D11_CHECK(device->CreateRasterizerState(&light_rast_desc, &light_rasterizer_state_));
+
     uniform_buffer_.initialize(sizeof(uniform_data_), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
     assert(lights_.size() > 0);
@@ -56,6 +62,16 @@ void Scene::initialize()
 
     light_data_buffer_.initialize(sizeof(Light::LightData), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
     light_transform_buffer_.initialize(sizeof(Light::CascadeData), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+
+    D3D11_SAMPLER_DESC depth_sampler_desc{};
+    depth_sampler_desc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+    depth_sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    depth_sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    depth_sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    depth_sampler_desc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+    depth_sampler_desc.MinLOD = 0;
+    depth_sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
+    D3D11_CHECK(Game::inst()->render().device()->CreateSamplerState(&depth_sampler_desc, &depth_sampler_state_));
 
     // render target view
     ID3D11Texture2D* rtv_tex{ nullptr };
@@ -83,8 +99,12 @@ void Scene::destroy()
     light_data_buffer_.destroy();
     lights_buffer_.destroy();
     uniform_buffer_.destroy();
+    light_rasterizer_state_->Release();
+    light_rasterizer_state_ = nullptr;
     rasterizer_state_->Release();
     rasterizer_state_ = nullptr;
+    depth_sampler_state_->Release();
+    depth_sampler_state_ = nullptr;
     shader_.destroy();
     light_shader_.destroy();
 }
@@ -115,7 +135,7 @@ void Scene::draw()
     auto camera = Game::inst()->render().camera();
 
     context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    context->RSSetState(rasterizer_state_);
+    context->RSSetState(light_rasterizer_state_);
 
     D3D11_VIEWPORT viewport = {};
     viewport.Width = 512;
@@ -142,8 +162,9 @@ void Scene::draw()
             }
         }
     }
-    Vector3 center[3]{ Vector3::Zero, Vector3::Zero, Vector3::Zero };
+    Vector3 center[Light::shadow_cascade_count]{ };
     for (uint32_t i = 0; i < Light::shadow_cascade_count; ++i) {
+        center[i] = Vector3::Zero;
         for (const auto &v : frustum_corners[i]) {
             center[i] += Vector3(v.x, v.y, v.z);
         }
@@ -161,8 +182,7 @@ void Scene::draw()
             light_data_buffer_.update_data(&light_data);
             light_data_buffer_.bind(0);
 
-            Matrix light_view = Matrix::Identity;
-            light_view = Matrix::CreateLookAt(center[i] - light_data.direction, center[i], Vector3::Up);
+            auto light_view = Matrix::CreateLookAt(center[i], center[i] + light_data.direction, Vector3(0.f, 1.f, 0.f));
 
             Matrix light_proj = Matrix::Identity;
             float minX = std::numeric_limits<float>::max();
@@ -222,6 +242,9 @@ void Scene::draw()
     light_transform_buffer_.update_data(&lights_[0]->get_cascade_data());
     light_transform_buffer_.bind(3);
 
+    context->PSSetSamplers(1, 1, &depth_sampler_state_);
+    context->VSSetSamplers(1, 1, &depth_sampler_state_);
+
     for (auto& model : models_) {
         model->draw();
     }
@@ -237,7 +260,8 @@ R"(struct VS_IN
 struct PS_IN
 {
     float4 pos : SV_POSITION;
-    float3 model_pos : POSITION;
+    float3 world_model_pos : POSITION0;
+    float3 mvp_model_pos : POSITION1;
     float3 normal : NORMAL;
     float2 uv : TEXCOORD;
 };
@@ -289,6 +313,7 @@ Texture2D<float4> texture_4     : register(t4);
 Texture2D<float4> texture_5     : register(t5);
 Texture2D<float4> texture_6     : register(t6);
 SamplerState tex_sampler : register(s0);
+SamplerComparisonState depth_sampler : register(s1);
 
 cbuffer CascadeData : register(b3)
 {
@@ -300,8 +325,10 @@ Texture2DArray<float> shadow_cascade : register(t10);
 PS_IN VSMain(VS_IN input)
 {
     PS_IN res = (PS_IN)0;
-    res.model_pos = mul(transform, float4(input.pos_uv_x.xyz, 1.f)).xyz;
-    res.pos = mul(view_proj, float4(res.model_pos, 1.f));
+    float4 world_model_pos = mul(transform, float4(input.pos_uv_x.xyz, 1.f));
+    res.world_model_pos = world_model_pos.xyz / world_model_pos.w;
+    res.pos = mul(view_proj, float4(res.world_model_pos, 1.f));
+    res.mvp_model_pos = res.pos.xyz / res.pos.w;
     res.normal = mul(inverse_transpose_transform, float4(input.normal_uv_y.xyz, 0.f)).xyz;
     res.uv = float2(input.pos_uv_x.w, input.normal_uv_y.w);
 
@@ -313,14 +340,23 @@ PS_OUT PSMain(PS_IN input)
     PS_OUT res = (PS_OUT)0;
 
     float3 normal = normalize(input.normal);
-    float3 pos = input.model_pos;
+    float3 world_pos = input.world_model_pos;
 
-    float4 light_pos = mul(cascade_view_proj[0], float4(pos, 1.f));
-    float real_depth = light_pos.z;
-    float light_depth = shadow_cascade.Sample(tex_sampler, float3(light_pos.xy, 0));
-    if (real_depth > light_depth)
+    int cascade_index = 0;
+    float depth = input.mvp_model_pos.z * distances.z; // distances.z = far plane
+    // if (depth > distances.x) {
+    //     cascade_index++;
+    // }
+    // if (depth > distances.y) {
+    //     cascade_index++;
+    // }
+
+    float4 pos_in_light_space = mul(cascade_view_proj[cascade_index], float4(world_pos, 1.f));
+    pos_in_light_space = pos_in_light_space / pos_in_light_space.w;
+    float depth_from_map = shadow_cascade.Sample(tex_sampler, float3(pos_in_light_space.xy * (0.5).xx + (0.5).xx, cascade_index) * float3(1, -1, 1));
+    if (depth_from_map < pos_in_light_space.z - 0.0001)
     { // shadow
-        res.color = float4(0.2, 0.2, 0.2, 1);
+        res.color = float4(0.2, 0.2, 0.2, 1.f);
     }
     else if (is_pbr)
     {
@@ -380,7 +416,7 @@ PS_OUT PSMain(PS_IN input)
         {
             float3 diffuse_component = lights[i].color * diffuse_color.xyz * max(dot(normal, -normalize(lights[i].direction)), 0);
             float3 reflected_view = reflect(normalize(lights[i].direction), normal);
-            float cos_phi = dot(reflected_view, normalize(camera_pos - pos));
+            float cos_phi = dot(reflected_view, normalize(camera_pos - world_pos));
             float3 specular_component = lights[i].color * specular_color * pow(max(cos_phi, 0), 5);
 
             res.color.xyz += diffuse_component + specular_component;

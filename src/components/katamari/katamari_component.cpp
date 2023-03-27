@@ -31,7 +31,7 @@ void KatamariComponent::initialize()
 
     { // debug plane
         plane_ = new Model("./resources/models/Plane_FBX/1000_plane.fbx");
-        plane_->set_scale(Vector3(1000.f));
+        plane_->set_scale(Vector3(10.f));
         plane_->set_rotation(Quaternion::CreateFromAxisAngle(Vector3(1.f, 0.f, 0.f), 1.57079632679f));
         scene_->add_model(plane_);
         plane_->load();

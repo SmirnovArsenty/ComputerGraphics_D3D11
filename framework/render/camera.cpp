@@ -190,7 +190,6 @@ std::vector<Matrix> Camera::cascade_view_proj()
         }
         }
         res.push_back(view() * projection);
-        near_value += iter;
         far_value += iter;
     }
     return res;
