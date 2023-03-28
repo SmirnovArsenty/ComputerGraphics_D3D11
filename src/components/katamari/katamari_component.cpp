@@ -37,39 +37,39 @@ void KatamariComponent::initialize()
         plane_->load();
     }
 
-    { // setup free objects
-        free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
-        free_models_.back()->set_position(Vector3(10.f, 0.f, 0.f));
-        scene_->add_model(free_models_.back());
-        free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
-        free_models_.back()->set_position(Vector3(0.f, 0.f, 10.f));
-        scene_->add_model(free_models_.back());
-        free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
-        free_models_.back()->set_position(Vector3(-10.f, 0.f, 0.f));
-        scene_->add_model(free_models_.back());
-        free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
-        free_models_.back()->set_position(Vector3(0.f, 0.f, -10.f));
-        scene_->add_model(free_models_.back());
-        free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
-        free_models_.back()->set_position(Vector3(20.f, 0.f, 0.f));
-        scene_->add_model(free_models_.back());
-        free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
-        free_models_.back()->set_position(Vector3(20.f, 0.f, 10.f));
-        scene_->add_model(free_models_.back());
-        free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
-        free_models_.back()->set_position(Vector3(15.f, 0.f, 15.f));
-        scene_->add_model(free_models_.back());
-        free_models_.push_back(new Model("./resources/models/Strawberry_FBX/Strawberry_fbx.fbx"));
-        free_models_.back()->set_position(Vector3(15.f, 0.f, 10.f));
-        scene_->add_model(free_models_.back());
-        free_models_.push_back(new Model("./resources/models/GiftBox_FBX/GiftBox_fbx.fbx"));
-        free_models_.back()->set_position(Vector3(30.f, 0.f, 20.f));
-        scene_->add_model(free_models_.back());
-        free_models_.push_back(new Model("./resources/models/Tire_FBX/Tire.fbx"));
-        free_models_.back()->set_position(Vector3(30.f, 0.f, -20.f));
-        free_models_.back()->set_scale(Vector3(0.02f, 0.02f, 0.02f));
-        scene_->add_model(free_models_.back());
-    }
+    // { // setup free objects
+    //     free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
+    //     free_models_.back()->set_position(Vector3(10.f, 0.f, 0.f));
+    //     scene_->add_model(free_models_.back());
+    //     free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
+    //     free_models_.back()->set_position(Vector3(0.f, 0.f, 10.f));
+    //     scene_->add_model(free_models_.back());
+    //     free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
+    //     free_models_.back()->set_position(Vector3(-10.f, 0.f, 0.f));
+    //     scene_->add_model(free_models_.back());
+    //     free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
+    //     free_models_.back()->set_position(Vector3(0.f, 0.f, -10.f));
+    //     scene_->add_model(free_models_.back());
+    //     free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
+    //     free_models_.back()->set_position(Vector3(20.f, 0.f, 0.f));
+    //     scene_->add_model(free_models_.back());
+    //     free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
+    //     free_models_.back()->set_position(Vector3(20.f, 0.f, 10.f));
+    //     scene_->add_model(free_models_.back());
+    //     free_models_.push_back(new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"));
+    //     free_models_.back()->set_position(Vector3(15.f, 0.f, 15.f));
+    //     scene_->add_model(free_models_.back());
+    //     free_models_.push_back(new Model("./resources/models/Strawberry_FBX/Strawberry_fbx.fbx"));
+    //     free_models_.back()->set_position(Vector3(15.f, 0.f, 10.f));
+    //     scene_->add_model(free_models_.back());
+    //     free_models_.push_back(new Model("./resources/models/GiftBox_FBX/GiftBox_fbx.fbx"));
+    //     free_models_.back()->set_position(Vector3(30.f, 0.f, 20.f));
+    //     scene_->add_model(free_models_.back());
+    //     free_models_.push_back(new Model("./resources/models/Tire_FBX/Tire.fbx"));
+    //     free_models_.back()->set_position(Vector3(30.f, 0.f, -20.f));
+    //     free_models_.back()->set_scale(Vector3(0.02f, 0.02f, 0.02f));
+    //     scene_->add_model(free_models_.back());
+    // }
 
     for (auto& model : attached_models_) {
         model.model->load();
@@ -83,6 +83,8 @@ void KatamariComponent::initialize()
     for (auto& model : free_models_) {
         model->load();
     }
+
+    Game::inst()->render().camera()->set_camera(Vector3(-10, 10, 10), Vector3(1.f, -1.f, -1.f));
 }
 
 void KatamariComponent::draw()

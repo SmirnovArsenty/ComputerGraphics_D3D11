@@ -24,7 +24,7 @@ float Camera::get_near() const
 
 float Camera::get_far() const
 {
-    constexpr float far_plane = 1e3f;
+    constexpr float far_plane = 1e4f;
     return far_plane;
 }
 
@@ -44,7 +44,7 @@ float Camera::get_fov() const
 void Camera::set_camera(Vector3 position, Vector3 forward)
 {
     position_ = position;
-    forward_ = forward;
+    forward.Normalize(forward_);
 
     if (focus_) {
         forward_ = focus_target_ - position_;
@@ -124,7 +124,7 @@ const Matrix Camera::view() const
     if (focus_) {
         pos = focus_target_ - forward_ * focus_distance_;
     }
-    return DirectX::XMMatrixLookAtRH(pos, pos + direction(), Vector3(0.f, 1.f, 0.f));
+    return Matrix::CreateLookAt(pos, pos + direction(), Vector3(0, 1, 0));
 }
 
 const Matrix Camera::proj() const
@@ -163,9 +163,8 @@ std::vector<Matrix> Camera::cascade_view_proj()
     std::vector<Matrix> res;
     res.reserve(Light::shadow_cascade_count);
 
-    float iter = get_far() / Light::shadow_cascade_count;
-    float near_value = get_near();
-    float far_value = iter;
+    float fars[Light::shadow_cascade_count] = { 50.f, 100.f, get_far() };
+    float nears[Light::shadow_cascade_count] = { get_near(), get_near(), get_near() };
     for (uint32_t i = 0; i < Light::shadow_cascade_count; ++i)
     {
         RECT rc;
@@ -178,11 +177,13 @@ std::vector<Matrix> Camera::cascade_view_proj()
         case CameraType::perspective:
         {
             float aspect_ratio = width / height;
-            projection = Matrix::CreatePerspectiveFieldOfView(get_fov(), aspect_ratio, near_value, far_value);
+            projection = Matrix::CreatePerspectiveFieldOfView(get_fov(), aspect_ratio, nears[i], fars[i]);
+            break;
         }
         case CameraType::orthographic:
         {
-            projection = Matrix::CreateOrthographic(width, height, near_value, far_value);
+            projection = Matrix::CreateOrthographic(width, height, nears[i], fars[i]);
+            break;
         }
         default:
         {
@@ -190,7 +191,6 @@ std::vector<Matrix> Camera::cascade_view_proj()
         }
         }
         res.push_back(view() * projection);
-        far_value += iter;
     }
     return res;
 }

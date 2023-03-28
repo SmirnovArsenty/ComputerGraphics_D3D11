@@ -182,9 +182,8 @@ void Scene::draw()
             light_data_buffer_.update_data(&light_data);
             light_data_buffer_.bind(0);
 
-            auto light_view = Matrix::CreateLookAt(center[i], center[i] + light_data.direction, Vector3(0.f, 1.f, 0.f));
+            Matrix light_view = Matrix::CreateLookAt(center[i] - light_data.direction, center[i], Vector3(0.f, 1.f, 0.f));
 
-            Matrix light_proj = Matrix::Identity;
             float minX = std::numeric_limits<float>::max();
             float maxX = std::numeric_limits<float>::lowest();
             float minY = std::numeric_limits<float>::max();
@@ -200,17 +199,22 @@ void Scene::draw()
                 minZ = std::min(minZ, trf.z);
                 maxZ = std::max(maxZ, trf.z);
             }
-            constexpr float zMult = 10.f;
-            minZ = (minZ < 0) ? minZ * zMult : minZ / zMult;
-            maxZ = (maxZ < 0) ? maxZ / zMult : maxZ * zMult;
+            Matrix light_proj = Matrix::Identity;
             switch (light_data.type)
             {
             case Light::Type::direction:
+            {
+                constexpr float zMult = 10.f;
+                minZ = (minZ < 0) ? minZ * zMult : minZ / zMult;
+                maxZ = (maxZ < 0) ? maxZ / zMult : maxZ * zMult;
                 light_proj = Matrix::CreateOrthographicOffCenter(minX, maxX, minY, maxY, minZ, maxZ);
                 break;
+            }
             default:
-                light_proj = Matrix::CreatePerspectiveOffCenter(minX, maxX, minY, maxY, minZ, maxZ);
+            {
+                // light_proj = Matrix::CreatePerspectiveOffCenter(minX, maxX, minY, maxY, minZ, maxZ);
                 break;
+            }
             }
             Matrix light_transform = light_view * light_proj;
             light->set_transform(i, light_transform, (camera->get_far() / Light::shadow_cascade_count) * (i + 1));
@@ -342,23 +346,27 @@ PS_OUT PSMain(PS_IN input)
     float3 normal = normalize(input.normal);
     float3 world_pos = input.world_model_pos;
 
+    float depth_distance = length(world_pos - camera_pos);
+
     int cascade_index = 0;
-    float depth = input.mvp_model_pos.z * distances.z; // distances.z = far plane
-    // if (depth > distances.x) {
-    //     cascade_index++;
-    // }
-    // if (depth > distances.y) {
-    //     cascade_index++;
-    // }
+    float depth = input.mvp_model_pos.z;
+    // distances.z = far plane
+    if (depth_distance > distances.x) {
+        cascade_index++;
+    }
+    if (depth_distance > distances.y) {
+        cascade_index++;
+    }
 
     float4 pos_in_light_space = mul(cascade_view_proj[cascade_index], float4(world_pos, 1.f));
     pos_in_light_space = pos_in_light_space / pos_in_light_space.w;
-    float depth_from_map = shadow_cascade.Sample(tex_sampler, float3(pos_in_light_space.xy * (0.5).xx + (0.5).xx, cascade_index) * float3(1, -1, 1));
-    if (depth_from_map < pos_in_light_space.z - 0.0001)
-    { // shadow
-        res.color = float4(0.2, 0.2, 0.2, 1.f);
-    }
-    else if (is_pbr)
+    float depth_from_map = shadow_cascade.SampleCmp(depth_sampler, float3(pos_in_light_space.xy * (0.5).xx + (0.5).xx, cascade_index) * float3(1, -1, 1), pos_in_light_space.z - 0.0003);
+    // if (depth_from_map > 0)
+    // { // shadow
+    //     res.color = float4(0.2, 0.2, 0.2, 1.f);
+    // }
+
+    if (is_pbr)
     {
         float4 base_color = (0).xxxx;
         float4 normal_camera = (0).xxxx;
@@ -405,8 +413,8 @@ PS_OUT PSMain(PS_IN input)
             ambient_color = texture_3.Sample(tex_sampler, input.uv);
         }
 
-        if ((material_flags & 7) == 0) { // no material provided - draw magenta
-            diffuse_color = float4(1.f, 0.f, 1.f, 1.f);
+        if ((material_flags & 7) == 0) { // no material provided - draw gray
+            diffuse_color = float4(.2f, .2f, .2f, 1.f);
             specular_color = (0.5).xxxx;
             ambient_color = (0.1).xxxx;
         }
@@ -419,7 +427,7 @@ PS_OUT PSMain(PS_IN input)
             float cos_phi = dot(reflected_view, normalize(camera_pos - world_pos));
             float3 specular_component = lights[i].color * specular_color * pow(max(cos_phi, 0), 5);
 
-            res.color.xyz += diffuse_component + specular_component;
+            res.color.xyz += (diffuse_component + specular_component) * depth_from_map;
         }
         if (dot(ambient_color, ambient_color) > 0) {
             res.color += ambient_color * 0.2f;
