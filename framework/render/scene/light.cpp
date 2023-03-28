@@ -14,8 +14,8 @@ Light::Light() : data_{ Type::undefined }
     // setup depth stencil array
     {
         D3D11_TEXTURE2D_DESC depth_desc{};
-        depth_desc.Width = 512;
-        depth_desc.Height = 512;
+        depth_desc.Width = 2048;
+        depth_desc.Height = 2048;
         depth_desc.Format = DXGI_FORMAT_R32_TYPELESS;
         depth_desc.ArraySize = shadow_cascade_count;
         depth_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;

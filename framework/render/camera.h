@@ -35,7 +35,7 @@ public:
     const Matrix proj() const;
     const Matrix view_proj() const;
 
-    std::vector<Matrix> cascade_view_proj();
+    std::vector<std::pair<Matrix, float>> cascade_view_proj();
 
     const Vector3& position() const;
     const Vector3& direction() const;

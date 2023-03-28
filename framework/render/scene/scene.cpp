@@ -76,8 +76,8 @@ void Scene::initialize()
     // render target view
     ID3D11Texture2D* rtv_tex{ nullptr };
     D3D11_TEXTURE2D_DESC rtv_tex_desc{};
-    rtv_tex_desc.Width = 512;
-    rtv_tex_desc.Height = 512;
+    rtv_tex_desc.Width = 2048;
+    rtv_tex_desc.Height = 2048;
     rtv_tex_desc.MipLevels = 1;
     rtv_tex_desc.ArraySize = 1;
     rtv_tex_desc.SampleDesc.Count = 1;
@@ -138,8 +138,8 @@ void Scene::draw()
     context->RSSetState(light_rasterizer_state_);
 
     D3D11_VIEWPORT viewport = {};
-    viewport.Width = 512;
-    viewport.Height = 512;
+    viewport.Width = 2048;
+    viewport.Height = 2048;
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
     viewport.MinDepth = 0;
@@ -150,7 +150,7 @@ void Scene::draw()
     auto view_frustums = camera->cascade_view_proj();
     for (uint32_t i = 0; i < Light::shadow_cascade_count; ++i) {
         frustum_corners[i].reserve(8);
-        Matrix inv_view_proj = view_frustums[i].Invert();
+        Matrix inv_view_proj = view_frustums[i].first.Invert();
         for (uint32_t x = 0; x < 2; ++x){
             for (uint32_t y = 0; y < 2; ++y) {
                 for (uint32_t z = 0; z < 2; ++z) {
@@ -217,7 +217,7 @@ void Scene::draw()
             }
             }
             Matrix light_transform = light_view * light_proj;
-            light->set_transform(i, light_transform, (camera->get_far() / Light::shadow_cascade_count) * (i + 1));
+            light->set_transform(i, light_transform, view_frustums[i].second);
         }
 
         light_transform_buffer_.update_data(&light->get_cascade_data());
@@ -247,7 +247,6 @@ void Scene::draw()
     light_transform_buffer_.bind(3);
 
     context->PSSetSamplers(1, 1, &depth_sampler_state_);
-    context->VSSetSamplers(1, 1, &depth_sampler_state_);
 
     for (auto& model : models_) {
         model->draw();

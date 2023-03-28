@@ -24,7 +24,7 @@ float Camera::get_near() const
 
 float Camera::get_far() const
 {
-    constexpr float far_plane = 1e4f;
+    constexpr float far_plane = 1e3f;
     return far_plane;
 }
 
@@ -158,12 +158,12 @@ const Matrix Camera::view_proj() const
     return view() * proj();
 }
 
-std::vector<Matrix> Camera::cascade_view_proj()
+std::vector<std::pair<Matrix, float>> Camera::cascade_view_proj()
 {
-    std::vector<Matrix> res;
+    std::vector<std::pair<Matrix, float>> res;
     res.reserve(Light::shadow_cascade_count);
 
-    float fars[Light::shadow_cascade_count] = { 50.f, 100.f, get_far() };
+    float fars[Light::shadow_cascade_count] = { 50.f, 200.f, get_far() };
     float nears[Light::shadow_cascade_count] = { get_near(), get_near(), get_near() };
     for (uint32_t i = 0; i < Light::shadow_cascade_count; ++i)
     {
@@ -190,7 +190,7 @@ std::vector<Matrix> Camera::cascade_view_proj()
             break;
         }
         }
-        res.push_back(view() * projection);
+        res.push_back(std::make_pair(view() * projection, fars[i]));
     }
     return res;
 }
