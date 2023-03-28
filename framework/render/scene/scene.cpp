@@ -28,8 +28,15 @@ void Scene::initialize()
     light_shader_.set_name("scene_light_shader");
 #endif
 
-    shader_.set_vs_shader_from_memory(shader_source_, "VSMain", nullptr, nullptr);
-    shader_.set_ps_shader_from_memory(shader_source_, "PSMain", nullptr, nullptr);
+    std::string shadow_cascade_size = std::to_string(Light::shadow_cascade_count);
+    std::string light_count = std::to_string(lights_.size());
+    D3D_SHADER_MACRO macro[] = {
+        "SHADOW_CASCADE_SIZE", shadow_cascade_size.c_str(),
+        "LIGHT_COUNT", light_count.c_str(),
+        nullptr, nullptr
+    };
+    shader_.set_vs_shader_from_memory(shader_source_, "VSMain", macro, nullptr);
+    shader_.set_ps_shader_from_memory(shader_source_, "PSMain", macro, nullptr);
     shader_.set_input_layout(inputs, std::size(inputs));
 #ifndef NDEBUG
     shader_.set_name("scene_draw_shader");
@@ -58,10 +65,10 @@ void Scene::initialize()
     assert(lights_data.size() > 0);
     lights_buffer_.initialize(D3D11_BIND_SHADER_RESOURCE,
                                 lights_data.data(), sizeof(Light::LightData), static_cast<UINT>(lights_data.size()),
-                                D3D11_USAGE_IMMUTABLE, (D3D11_CPU_ACCESS_FLAG)0, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
+                                D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
     light_data_buffer_.initialize(sizeof(Light::LightData), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-    light_transform_buffer_.initialize(sizeof(Light::CascadeData), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+    // light_transform_buffer_.initialize(sizeof(Light::CascadeData), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
     D3D11_SAMPLER_DESC depth_sampler_desc{};
     depth_sampler_desc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
@@ -95,7 +102,6 @@ void Scene::destroy()
 {
     models_.clear();
     lights_.clear();
-    light_transform_buffer_.destroy();
     light_data_buffer_.destroy();
     lights_buffer_.destroy();
     uniform_buffer_.destroy();
@@ -138,8 +144,8 @@ void Scene::draw()
     context->RSSetState(light_rasterizer_state_);
 
     D3D11_VIEWPORT viewport = {};
-    viewport.Width = 2048;
-    viewport.Height = 2048;
+    viewport.Width = Light::shadow_map_resolution;
+    viewport.Height = Light::shadow_map_resolution;
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
     viewport.MinDepth = 0;
@@ -220,9 +226,6 @@ void Scene::draw()
             light->set_transform(i, light_transform, view_frustums[i].second);
         }
 
-        light_transform_buffer_.update_data(&light->get_cascade_data());
-        light_transform_buffer_.bind(3);
-
         for (auto& model : models_) {
             model->draw();
         }
@@ -238,13 +241,20 @@ void Scene::draw()
     shader_.use();
     uniform_buffer_.update_data(&uniform_data_);
     uniform_buffer_.bind(0);
+
+    std::vector<Light::LightData> lights_data;
+    for (auto& light : lights_) {
+        lights_data.push_back(light->get_data());
+    }
+    lights_buffer_.update_data(lights_data.data());
     lights_buffer_.bind(0);
 
-    ID3D11ShaderResourceView* tex_array{ lights_[0]->get_depth_view() };
-    context->PSSetShaderResources(10, 1, &tex_array);
-
-    light_transform_buffer_.update_data(&lights_[0]->get_cascade_data());
-    light_transform_buffer_.bind(3);
+    std::vector<ID3D11ShaderResourceView*> tex_array;
+    for (auto& light : lights_)
+    {
+        tex_array.push_back(light->get_depth_view());
+    }
+    context->PSSetShaderResources(10, UINT(tex_array.size()), tex_array.data());
 
     context->PSSetSamplers(1, 1, &depth_sampler_state_);
 
@@ -306,6 +316,9 @@ struct Light
 
     float3 direction;
     float dummy;
+
+    float4x4 cascade_view_proj[SHADOW_CASCADE_SIZE];
+    float4 distances;
 };
 
 StructuredBuffer<Light> lights  : register(t0);
@@ -318,12 +331,7 @@ Texture2D<float4> texture_6     : register(t6);
 SamplerState tex_sampler : register(s0);
 SamplerComparisonState depth_sampler : register(s1);
 
-cbuffer CascadeData : register(b3)
-{
-    float4x4 cascade_view_proj[3];
-    float4 distances;
-}
-Texture2DArray<float> shadow_cascade : register(t10);
+Texture2DArray<float> shadow_cascade[LIGHT_COUNT] : register(t10);
 
 PS_IN VSMain(VS_IN input)
 {
@@ -346,24 +354,6 @@ PS_OUT PSMain(PS_IN input)
     float3 world_pos = input.world_model_pos;
 
     float depth_distance = length(world_pos - camera_pos);
-
-    int cascade_index = 0;
-    float depth = input.mvp_model_pos.z;
-    // distances.z = far plane
-    if (depth_distance > distances.x) {
-        cascade_index++;
-    }
-    if (depth_distance > distances.y) {
-        cascade_index++;
-    }
-
-    float4 pos_in_light_space = mul(cascade_view_proj[cascade_index], float4(world_pos, 1.f));
-    pos_in_light_space = pos_in_light_space / pos_in_light_space.w;
-    float depth_from_map = shadow_cascade.SampleCmp(depth_sampler, float3(pos_in_light_space.xy * (0.5).xx + (0.5).xx, cascade_index) * float3(1, -1, 1), pos_in_light_space.z - 0.0003);
-    // if (depth_from_map > 0)
-    // { // shadow
-    //     res.color = float4(0.2, 0.2, 0.2, 1.f);
-    // }
 
     if (is_pbr)
     {
@@ -419,14 +409,31 @@ PS_OUT PSMain(PS_IN input)
         }
 
         res.color = (0).xxxx;
-        for (uint i = 0; i < lights_count; ++i)
+        for (uint i = 0; i < LIGHT_COUNT; ++i)
         {
+            int cascade_index = 0;
+            float depth = input.mvp_model_pos.z;
+            // distances.z = far plane
+            if (depth_distance > lights[i].distances.x) {
+                cascade_index++;
+            }
+            if (depth_distance > lights[i].distances.y) {
+                cascade_index++;
+            }
+
+            float4 pos_in_light_space = mul(lights[i].cascade_view_proj[cascade_index], float4(world_pos, 1.f));
+            pos_in_light_space = pos_in_light_space / pos_in_light_space.w;
+            // shadow value: 0 - darkest shadow; 1 - no shadow
+            float shadow_value = shadow_cascade[i].SampleCmp(depth_sampler,
+                        float3(pos_in_light_space.xy * (0.5).xx + (0.5).xx, cascade_index) * float3(1, -1, 1),
+                        pos_in_light_space.z - 0.0003);
+
             float3 diffuse_component = lights[i].color * diffuse_color.xyz * max(dot(normal, -normalize(lights[i].direction)), 0);
             float3 reflected_view = reflect(normalize(lights[i].direction), normal);
             float cos_phi = dot(reflected_view, normalize(camera_pos - world_pos));
             float3 specular_component = lights[i].color * specular_color * pow(max(cos_phi, 0), 5);
 
-            res.color.xyz += (diffuse_component + specular_component) * depth_from_map;
+            res.color.xyz += (diffuse_component + specular_component) * shadow_value;
         }
         if (dot(ambient_color, ambient_color) > 0) {
             res.color += ambient_color * 0.2f;
@@ -454,6 +461,9 @@ R"(cbuffer LightData : register(b0)
 
     float3 direction;
     float dummy;
+
+    float4x4 cascade_view_proj[3];
+    float4 distances;
 };
 
 cbuffer ModelData : register(b1)
@@ -469,12 +479,6 @@ cbuffer MeshData : register(b2)
     uint material_flags;
     float2 MeshData_dummy;
 };
-
-cbuffer CascadeData : register(b3)
-{
-    float4x4 view_proj[3];
-    float4 distances;
-}
 
 struct VS_IN
 {
@@ -510,7 +514,7 @@ void GSMain(triangle GS_IN p[3],
     [unroll]
     for (int i = 0; i < 3; ++i) {
         GS_OUT gs = (GS_OUT)0;
-        gs.pos = mul(view_proj[id], float4(p[i].pos.xyz, 1.f));
+        gs.pos = mul(cascade_view_proj[id], float4(p[i].pos.xyz, 1.f));
         gs.arr_ind = id;
         stream.Append(gs);
     }

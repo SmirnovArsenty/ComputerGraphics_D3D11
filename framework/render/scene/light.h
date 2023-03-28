@@ -14,6 +14,7 @@ class Light
 {
 public:
     constexpr static uint32_t shadow_cascade_count = 3;
+    constexpr static uint32_t shadow_map_resolution = 2048;
 
     enum class Type : uint32_t
     {
@@ -33,9 +34,7 @@ public:
 
         Vector3 direction;
         float dummy;
-    };
 
-    struct CascadeData {
         Matrix transform[shadow_cascade_count];
         Vector4 distances;
     };
@@ -44,7 +43,6 @@ public:
     ~Light();
 
     LightData& get_data();
-    CascadeData& get_cascade_data();
 
     void set_type(Type type);
     Type get_type() const;
@@ -64,7 +62,6 @@ public:
     Matrix get_transform(uint32_t index);
 private:
     LightData data_;
-    CascadeData cascade_data_;
 
     ID3D11Texture2D* ds_buffer_{ nullptr };
     ID3D11ShaderResourceView* ds_buffer_view_{ nullptr };

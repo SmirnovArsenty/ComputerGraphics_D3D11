@@ -125,3 +125,37 @@ void ConstBuffer::update_data(void* data)
     memcpy(mss.pData, data, buffer_desc_.ByteWidth);
     context->Unmap(resource_, 0);
 }
+
+void StructuredBuffer::initialize(D3D11_BIND_FLAG bind_flags, void* data, UINT stride, UINT count, D3D11_USAGE usage, D3D11_CPU_ACCESS_FLAG cpu_access)
+{
+    buffer_desc_.Usage = usage;
+    buffer_desc_.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    buffer_desc_.CPUAccessFlags = cpu_access;
+    buffer_desc_.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+    buffer_desc_.StructureByteStride = stride;
+    buffer_desc_.ByteWidth = stride * count;
+
+    subresource_data_.pSysMem = data;
+    subresource_data_.SysMemPitch = 0;
+    subresource_data_.SysMemSlicePitch = 0;
+
+    auto device = Game::inst()->render().device();
+    D3D11_CHECK(device->CreateBuffer(&buffer_desc_, &subresource_data_, &resource_));
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC resource_view_desc;
+    resource_view_desc.BufferEx.FirstElement = 0;
+    resource_view_desc.BufferEx.NumElements = count;
+    resource_view_desc.BufferEx.Flags = 0;
+    resource_view_desc.Format = DXGI_FORMAT_UNKNOWN;
+    resource_view_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+    D3D11_CHECK(device->CreateShaderResourceView(resource_, &resource_view_desc, &resource_view_));
+}
+
+void StructuredBuffer::update_data(void* data)
+{
+    auto context = Game::inst()->render().context();
+    D3D11_MAPPED_SUBRESOURCE mss;
+    context->Map(resource_, 0, D3D11_MAP_WRITE_DISCARD, 0, &mss);
+    memcpy(mss.pData, data, buffer_desc_.ByteWidth);
+    context->Unmap(resource_, 0);
+}

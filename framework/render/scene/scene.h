@@ -45,11 +45,10 @@ private:
     static std::string shader_source_;
 
     ConstBuffer light_data_buffer_;
-    ConstBuffer light_transform_buffer_;
     Shader light_shader_;
     static std::string light_shader_source_;
 
-    Buffer lights_buffer_;
+    StructuredBuffer lights_buffer_;
 
     ID3D11RasterizerState* rasterizer_state_{ nullptr };
     ID3D11RasterizerState* light_rasterizer_state_{ nullptr };

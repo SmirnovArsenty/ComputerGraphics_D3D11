@@ -14,8 +14,8 @@ Light::Light() : data_{ Type::undefined }
     // setup depth stencil array
     {
         D3D11_TEXTURE2D_DESC depth_desc{};
-        depth_desc.Width = 2048;
-        depth_desc.Height = 2048;
+        depth_desc.Width = shadow_map_resolution;
+        depth_desc.Height = shadow_map_resolution;
         depth_desc.Format = DXGI_FORMAT_R32_TYPELESS;
         depth_desc.ArraySize = shadow_cascade_count;
         depth_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
@@ -62,11 +62,6 @@ Light::~Light()
 Light::LightData& Light::get_data()
 {
     return data_;
-}
-
-Light::CascadeData& Light::get_cascade_data()
-{
-    return cascade_data_;
 }
 
 void Light::set_type(Light::Type type)
@@ -133,19 +128,19 @@ ID3D11DepthStencilView* Light::get_depth_map()
 
 void Light::set_transform(uint32_t index, Matrix transform, float distance)
 {
-    cascade_data_.transform[index] = transform;
+    data_.transform[index] = transform;
     if (index == 0) {
-        cascade_data_.distances.x = distance;
+        data_.distances.x = distance;
     } else if (index == 1) {
-        cascade_data_.distances.y = distance;
+        data_.distances.y = distance;
     } else if (index == 2) {
-        cascade_data_.distances.z = distance;
+        data_.distances.z = distance;
     } else if (index == 3) {
-        cascade_data_.distances.w = distance;
+        data_.distances.w = distance;
     }
 }
 
 Matrix Light::get_transform(uint32_t index)
 {
-    return cascade_data_.transform[index];
+    return data_.transform[index];
 }
