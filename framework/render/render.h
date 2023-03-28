@@ -1,5 +1,6 @@
 #pragma once
 
+#define NOMINMAX
 #include <Windows.h>
 #include <wrl.h>
 #include <d3d11.h>
@@ -50,7 +51,7 @@ public:
     void fullscreen(bool);
 
     void prepare_frame();
-    void prepare_resources();
+    void prepare_resources() const;
 
     void prepare_imgui();
     void end_imgui();

@@ -1,9 +1,10 @@
-[submodule "third_party/tinygltf"]
-    path = third_party/tinygltf
-    url = https://github.com/syoyo/tinygltf.git
 [submodule "third_party/imgui"]
     path = third_party/imgui
     url = https://github.com/ocornut/imgui.git
 [submodule "third_party/directxtk"]
     path = third_party/directxtk
     url = https://github.com/microsoft/DirectXTK.git
+[submodule "third_party/assimp"]
+    path = third_party/assimp
+    url = https://github.com/assimp/assimp.git
+

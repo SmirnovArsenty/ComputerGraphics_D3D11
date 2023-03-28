@@ -51,7 +51,7 @@ void Render::initialize()
         create_device_flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
-#if 0
+#if 1
         // choose best adapter by memory
         Microsoft::WRL::ComPtr<IDXGIFactory> factory;
         D3D11_CHECK(CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&factory));
@@ -178,24 +178,15 @@ void Render::prepare_frame()
 {
     context_->ClearState();
 
-    RECT rc;
-    GetWindowRect(Game::inst()->win().window(), &rc);
-    D3D11_VIEWPORT viewport = {};
-    viewport.Width = static_cast<float>(rc.right - rc.left);
-    viewport.Height = static_cast<float>(rc.bottom - rc.top);
-    viewport.TopLeftX = 0;
-    viewport.TopLeftY = 0;
-    viewport.MinDepth = 0;
-    viewport.MaxDepth = 1.0f;
-
-    context_->RSSetViewports(1, &viewport);
-
     { // move camera
         float camera_move_delta = Game::inst()->delta_time() * 1e2f;
         const auto& keyboard = Game::inst()->win().input()->keyboard();
 
         if (keyboard.shift.pressed) {
             camera_move_delta *= 1e1f;
+        }
+        if (keyboard.ctrl.pressed) {
+            camera_move_delta *= 1e-1f;
         }
         camera_->move_forward(camera_move_delta * keyboard.w.pressed);
         camera_->move_right(camera_move_delta * keyboard.d.pressed);
@@ -219,14 +210,27 @@ void Render::prepare_frame()
     }
 }
 
-void Render::prepare_resources()
+void Render::prepare_resources() const
 {
     context_->OMSetRenderTargets(1, &render_target_view_, depth_stencil_view_);
+
     float clear_color[4] = { 0.f, 0.f, 0.f, 1.f };
     context_->ClearRenderTargetView(render_target_view_, clear_color);
 
     context_->OMSetDepthStencilState(depth_stencil_state_, 0);
     context_->ClearDepthStencilView(depth_stencil_view_, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0xFF);
+
+    RECT rc;
+    GetWindowRect(Game::inst()->win().window(), &rc);
+    D3D11_VIEWPORT viewport = {};
+    viewport.Width = static_cast<float>(rc.right - rc.left);
+    viewport.Height = static_cast<float>(rc.bottom - rc.top);
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+    viewport.MinDepth = 0;
+    viewport.MaxDepth = 1.0f;
+
+    context_->RSSetViewports(1, &viewport);
 }
 
 void Render::prepare_imgui()
