@@ -54,5 +54,16 @@ private:
     ID3D11RasterizerState* light_rasterizer_state_{ nullptr };
     ID3D11SamplerState* depth_sampler_state_{ nullptr };
 
-    ID3D11RenderTargetView* render_target_view_{};
+    constexpr static uint32_t gbuffer_count_ = 4;
+    // position
+    // normal
+    // diffuse
+    // specular
+    ID3D11Texture2D* deferred_gbuffers_[gbuffer_count_];
+    ID3D11ShaderResourceView* deferred_gbuffers_view_[gbuffer_count_]{};
+    ID3D11RenderTargetView* deferred_gbuffers_target_view_[gbuffer_count_]{};
+    // depth
+    ID3D11Texture2D* deferred_depth_buffer_;
+    ID3D11ShaderResourceView* deferred_depth_view_;
+    ID3D11DepthStencilView* deferred_depth_target_view_;
 };

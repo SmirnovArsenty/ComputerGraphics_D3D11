@@ -115,7 +115,7 @@ void Model::draw()
     }
 }
 
-Vector3 Model::min()
+Vector3 Model::extent_min()
 {
     Vector3 ret_position;
     Vector3 ret_scale;
@@ -124,7 +124,7 @@ Vector3 Model::min()
     return min_ * ret_scale;
 }
 
-Vector3 Model::max()
+Vector3 Model::extent_max()
 {
     Vector3 ret_position;
     Vector3 ret_scale;
@@ -135,7 +135,7 @@ Vector3 Model::max()
 
 float Model::radius()
 {
-    Vector3 diag = max() - min();
+    Vector3 diag = extent_max() - extent_min();
     return diag.Length() / 2;
 }
 

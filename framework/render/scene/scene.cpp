@@ -1,4 +1,5 @@
 #include "core/game.h"
+#include "win32/win.h"
 #include "render/render.h"
 #include "render/camera.h"
 #include "render/d3d11_common.h"
@@ -80,22 +81,59 @@ void Scene::initialize()
     depth_sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
     D3D11_CHECK(Game::inst()->render().device()->CreateSamplerState(&depth_sampler_desc, &depth_sampler_state_));
 
-    // render target view
-    ID3D11Texture2D* rtv_tex{ nullptr };
+    // deferred initialize
+    RECT rc;
+    GetWindowRect(Game::inst()->win().window(), &rc);
+    UINT width = UINT(rc.right - rc.left);
+    UINT height = UINT(rc.bottom - rc.top);
+
     D3D11_TEXTURE2D_DESC rtv_tex_desc{};
-    rtv_tex_desc.Width = 2048;
-    rtv_tex_desc.Height = 2048;
+    rtv_tex_desc.Width = width;
+    rtv_tex_desc.Height = height;
+    rtv_tex_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     rtv_tex_desc.MipLevels = 1;
     rtv_tex_desc.ArraySize = 1;
     rtv_tex_desc.SampleDesc.Count = 1;
     rtv_tex_desc.SampleDesc.Quality = 0;
     rtv_tex_desc.Usage = D3D11_USAGE_DEFAULT;
-    rtv_tex_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    rtv_tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+    rtv_tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
     rtv_tex_desc.CPUAccessFlags = 0;
     rtv_tex_desc.MiscFlags = 0;
-    D3D11_CHECK(device->CreateTexture2D(&rtv_tex_desc, nullptr, &rtv_tex));
-    D3D11_CHECK(device->CreateRenderTargetView((ID3D11Resource*)rtv_tex, nullptr, &render_target_view_));
+
+    for (uint32_t i = 0; i < gbuffer_count_; ++i) {
+        D3D11_CHECK(device->CreateTexture2D(&rtv_tex_desc, nullptr, &deferred_gbuffers_[i]));
+        D3D11_CHECK(device->CreateRenderTargetView((ID3D11Resource*)deferred_gbuffers_[i], nullptr, &deferred_gbuffers_target_view_[i]));
+        D3D11_CHECK(device->CreateShaderResourceView((ID3D11Resource*)deferred_gbuffers_[i], nullptr, &deferred_gbuffers_view_[i]));
+    }
+
+    D3D11_TEXTURE2D_DESC depth_desc{};
+    depth_desc.Width = width;
+    depth_desc.Height = height;
+    depth_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+    depth_desc.MipLevels = 1;
+    depth_desc.ArraySize = 1;
+    depth_desc.SampleDesc.Count = 1;
+    depth_desc.SampleDesc.Quality = 0;
+    depth_desc.Usage = D3D11_USAGE_DEFAULT;
+    depth_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
+    depth_desc.CPUAccessFlags = 0;
+    depth_desc.MiscFlags = 0;
+    D3D11_CHECK(device->CreateTexture2D(&depth_desc, nullptr, &deferred_depth_buffer_));
+
+    D3D11_DEPTH_STENCIL_VIEW_DESC ds_desc{};
+    ds_desc.Format = DXGI_FORMAT_D32_FLOAT;
+    ds_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    ds_desc.Texture2D.MipSlice = 0;
+    D3D11_CHECK(device->CreateDepthStencilView(deferred_depth_buffer_, &ds_desc, &deferred_depth_target_view_));
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+    srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
+    srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+    srv_desc.Texture2DArray.MostDetailedMip = 0;
+    srv_desc.Texture2DArray.MipLevels = 1;
+    srv_desc.Texture2DArray.FirstArraySlice = 0;
+    srv_desc.Texture2DArray.ArraySize = 1;
+    D3D11_CHECK(device->CreateShaderResourceView(deferred_depth_buffer_, &srv_desc, &deferred_depth_view_));
 }
 
 void Scene::destroy()
@@ -190,20 +228,20 @@ void Scene::draw()
 
             Matrix light_view = Matrix::CreateLookAt(center[i] - light_data.direction, center[i], Vector3(0.f, 1.f, 0.f));
 
-            float minX = std::numeric_limits<float>::max();
+            float minX = -std::numeric_limits<float>::lowest();
             float maxX = std::numeric_limits<float>::lowest();
-            float minY = std::numeric_limits<float>::max();
+            float minY = -std::numeric_limits<float>::lowest();
             float maxY = std::numeric_limits<float>::lowest();
-            float minZ = std::numeric_limits<float>::max();
+            float minZ = -std::numeric_limits<float>::lowest();
             float maxZ = std::numeric_limits<float>::lowest();
             for (auto &v : frustum_corners[i]) {
                 Vector4 trf = Vector4::Transform(v, light_view);
-                minX = std::min(minX, trf.x);
-                maxX = std::max(maxX, trf.x);
-                minY = std::min(minY, trf.y);
-                maxY = std::max(maxY, trf.y);
-                minZ = std::min(minZ, trf.z);
-                maxZ = std::max(maxZ, trf.z);
+                minX = minX > trf.x ? trf.x : minX;
+                maxX = maxX < trf.x ? trf.x : maxX;
+                minY = minY > trf.y ? trf.y : minY;
+                maxY = maxY < trf.y ? trf.y : maxY;
+                minZ = minZ > trf.z ? trf.z : minZ;
+                maxZ = maxZ < trf.z ? trf.z : maxZ;
             }
             Matrix light_proj = Matrix::Identity;
             switch (light_data.type)

@@ -1,4 +1,3 @@
-#define NOMINMAX
 #include "katamari_component.h"
 #include "core/game.h"
 #include "render/render.h"
@@ -170,14 +169,13 @@ void KatamariComponent::update()
     for (auto& model : free_models_)
     {
         auto old_pos = model->position();
-        model->set_position(Vector3(old_pos.x, (model->max().y - model->min().y) / 2, old_pos.z));
+        model->set_position(Vector3(old_pos.x, (model->extent_max().y - model->extent_min().y) / 2, old_pos.z));
     }
     auto camera = Game::inst()->render().camera();
 
     const auto& keyboard = Game::inst()->win().input()->keyboard();
 
-    float rotation_delta = Game::inst()->delta_time();
-    float move_delta = Game::inst()->delta_time();
+    float rotation_delta = Game::inst()->delta_time() * 3;
     if (keyboard.up.pressed)
     {
         Vector3 pos = attached_models_[0].model->position();

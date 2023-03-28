@@ -38,7 +38,7 @@ Light::Light() : data_{ Type::undefined }
         srv_desc.Texture2DArray.MostDetailedMip = 0;
         srv_desc.Texture2DArray.MipLevels = 1;
         srv_desc.Texture2DArray.FirstArraySlice = 0;
-        srv_desc.Texture2DArray.ArraySize = 3;
+        srv_desc.Texture2DArray.ArraySize = Light::shadow_cascade_count;
         D3D11_CHECK(device->CreateShaderResourceView(ds_buffer_, &srv_desc, &ds_buffer_view_));
     }
 }
