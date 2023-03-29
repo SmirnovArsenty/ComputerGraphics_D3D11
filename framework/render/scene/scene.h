@@ -57,8 +57,7 @@ private:
     Shader assemble_gbuffers_shader_;
     ID3D11SamplerState* texture_sampler_state_{ nullptr };
 
-    constexpr static uint32_t gbuffer_count_ = 5;
-    // position
+    constexpr static uint32_t gbuffer_count_ = 4;
     // normal
     // diffuse
     // specular

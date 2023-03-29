@@ -14,11 +14,10 @@ struct PS_IN
 
 struct PS_OUT
 {
-    float4 position : SV_Target0;
-    float4 normal   : SV_Target1;
-    float4 diffuse  : SV_Target2;
-    float4 specular : SV_Target3;
-    float4 ambient  : SV_Target4;
+    float4 normal   : SV_Target0;
+    float4 diffuse  : SV_Target1;
+    float4 specular : SV_Target2;
+    float4 ambient  : SV_Target3;
 };
 
 cbuffer SceneData : register(b0)
@@ -64,10 +63,7 @@ PS_OUT PSMain(PS_IN input)
     PS_OUT res = (PS_OUT)0;
 
     float3 normal = normalize(input.normal.xyz);
-    float3 world_pos = input.world_model_pos.xyz;
-
-    res.position = input.world_model_pos;
-    res.normal = float4(normal, 1.f);
+    res.normal = float4(normal * (0.5).xxx + (0.5).xxx, 1.f);
 
     { // Phong light model
         float4 diffuse_color = (0).xxxx;

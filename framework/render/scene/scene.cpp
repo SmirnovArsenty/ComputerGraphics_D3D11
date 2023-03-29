@@ -241,6 +241,7 @@ void Scene::draw()
 
         // draw models
         generate_gbuffers_shader_.use();
+        uniform_data_.view_proj = camera->view_proj();
         uniform_buffer_.update_data(&uniform_data_);
         uniform_buffer_.bind(0);
 
@@ -263,10 +264,15 @@ void Scene::draw()
 
         assemble_gbuffers_shader_.use();
         context->PSSetShaderResources(0, gbuffer_count_, deferred_gbuffers_view_);
-        context->PSSetShaderResources(5, 1, &deferred_depth_view_);
+        context->PSSetShaderResources(gbuffer_count_, 1, &deferred_depth_view_);
 
         context->PSSetSamplers(0, 1, &texture_sampler_state_);
         context->PSSetSamplers(1, 1, &depth_sampler_state_);
+
+        // restore pos from depth
+        uniform_data_.view_proj = uniform_data_.view_proj.Invert();
+        uniform_buffer_.update_data(&uniform_data_);
+        uniform_buffer_.bind(0);
 
         context->Draw(3, 0);
     }
