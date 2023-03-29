@@ -41,29 +41,34 @@ private:
         Vector3 camera_dir;
         uint32_t lights_count;
     } uniform_data_;
-    Shader shader_;
-    static std::string shader_source_;
 
-    ConstBuffer light_data_buffer_;
-    Shader light_shader_;
-    static std::string light_shader_source_;
-
-    StructuredBuffer lights_buffer_;
-
+    // generate gbuffers
+    Shader generate_gbuffers_shader_;
     ID3D11RasterizerState* rasterizer_state_{ nullptr };
+
+    // light pass
+    Shader light_shader_;
+    ConstBuffer light_data_buffer_;
+    StructuredBuffer lights_buffer_;
     ID3D11RasterizerState* light_rasterizer_state_{ nullptr };
     ID3D11SamplerState* depth_sampler_state_{ nullptr };
 
-    constexpr static uint32_t gbuffer_count_ = 4;
+    // assemble
+    Shader assemble_gbuffers_shader_;
+    ID3D11SamplerState* texture_sampler_state_{ nullptr };
+
+    constexpr static uint32_t gbuffer_count_ = 5;
     // position
     // normal
     // diffuse
     // specular
-    ID3D11Texture2D* deferred_gbuffers_[gbuffer_count_];
-    ID3D11ShaderResourceView* deferred_gbuffers_view_[gbuffer_count_]{};
-    ID3D11RenderTargetView* deferred_gbuffers_target_view_[gbuffer_count_]{};
+    // ambient
+    ID3D11Texture2D* deferred_gbuffers_[gbuffer_count_]{ nullptr };
+    ID3D11ShaderResourceView* deferred_gbuffers_view_[gbuffer_count_]{ nullptr };
+    ID3D11RenderTargetView* deferred_gbuffers_target_view_[gbuffer_count_]{ nullptr };
     // depth
-    ID3D11Texture2D* deferred_depth_buffer_;
-    ID3D11ShaderResourceView* deferred_depth_view_;
-    ID3D11DepthStencilView* deferred_depth_target_view_;
+    ID3D11DepthStencilState* deferred_depth_state_{ nullptr };
+    ID3D11Texture2D* deferred_depth_buffer_{ nullptr };
+    ID3D11ShaderResourceView* deferred_depth_view_{ nullptr };
+    ID3D11DepthStencilView* deferred_depth_target_view_{ nullptr };
 };
