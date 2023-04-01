@@ -15,6 +15,7 @@ SamplerComparisonState depth_sampler    : register(s1);
 cbuffer SceneData : register(b0)
 {
     float4x4 view_proj;
+    float4x4 inv_view_proj;
     float3 camera_pos;
     float time;
     float3 camera_dir;
@@ -26,8 +27,8 @@ float4 PSMain(float4 position : SV_POSITION) : SV_Target0
     float3 result;
 
     float depth = depth_tex.Load(int3(position.xy, 0));
-    return float4((pow(depth, 100)).xxx, 1.f);
-    float3 pos = mul(view_proj, float4(position.xy, depth, 1.f)).xyz;
+    float4 pos = mul(inv_view_proj, float4(position.xy, depth, 1.f));
+    return pos / pos.w;
     // float3 pos = position_tex.Load(int3(position.xy, 0)).xyz * (2.f).xxx - (1.f).xxx;
     float3 normal = normal_tex.Load(int3(position.xy, 0)).xyz * (2.f).xxx - (1.f).xxx;
 

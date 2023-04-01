@@ -60,10 +60,21 @@ public:
     ID3D11DepthStencilView* get_depth_map();
     void set_transform(uint32_t index, Matrix transform, float distance);
     Matrix get_transform(uint32_t index);
+
+    void draw();
+
 private:
     LightData data_;
 
     ID3D11Texture2D* ds_buffer_{ nullptr };
     ID3D11ShaderResourceView* ds_buffer_view_{ nullptr };
     ID3D11DepthStencilView* ds_view_{ nullptr };
+
+    // deferred
+    ID3D11DepthStencilState* ds_state_{ nullptr };
+    ID3D11BlendState* blend_state_{ nullptr };
+    std::vector<Vector4> vertices_; // just positions
+    Buffer vertex_buffer_;
+    std::vector<uint32_t> indices_;
+    Buffer index_buffer_;
 };

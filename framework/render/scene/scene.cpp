@@ -19,60 +19,51 @@ void Scene::initialize()
 {
     auto device = Game::inst()->render().device();
 
-    // setup shaders
-    D3D11_INPUT_ELEMENT_DESC inputs[] = {
-        { "POSITION_UV_X", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "NORMAL_UV_Y", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    };
-    // light_shader_.set_vs_shader_from_memory(light_shader_source_, "VSMain", nullptr, nullptr);
-    // light_shader_.set_gs_shader_from_memory(light_shader_source_, "GSMain", nullptr, nullptr);
-    // light_shader_.set_input_layout(inputs, std::size(inputs));
+    {
+        D3D11_INPUT_ELEMENT_DESC inputs[] = {
+            { "POSITION_UV_X", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "NORMAL_UV_Y", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        };
+        opaque_pass_shader_.set_vs_shader_from_file("./resources/shaders/deferred/opaque_pass.hlsl", "VSMain", nullptr, nullptr);
+        opaque_pass_shader_.set_ps_shader_from_file("./resources/shaders/deferred/opaque_pass.hlsl", "PSMain", nullptr, nullptr);
+        opaque_pass_shader_.set_input_layout(inputs, std::size(inputs));
 #ifndef NDEBUG
-    // light_shader_.set_name("scene_light_shader");
+        opaque_pass_shader_.set_name("opaque_pass");
 #endif
+    }
 
-    std::string shadow_cascade_size = std::to_string(Light::shadow_cascade_count);
-    std::string light_count = std::to_string(lights_.size());
-    D3D_SHADER_MACRO macro[] = {
-        "SHADOW_CASCADE_SIZE", shadow_cascade_size.c_str(),
-        "LIGHT_COUNT", light_count.c_str(),
-        nullptr, nullptr
-    };
-    generate_gbuffers_shader_.set_vs_shader_from_file("./resources/shaders/deferred/generate_gbuffers.hlsl", "VSMain", nullptr, nullptr);
-    generate_gbuffers_shader_.set_ps_shader_from_file("./resources/shaders/deferred/generate_gbuffers.hlsl", "PSMain", nullptr, nullptr);
-    generate_gbuffers_shader_.set_input_layout(inputs, std::size(inputs));
+    {
+        D3D11_INPUT_ELEMENT_DESC inputs[] = {
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+        };
+        light_pass_shader_.set_vs_shader_from_file("./resources/shaders/deferred/light_pass.hlsl", "VSMain", nullptr, nullptr);
+        light_pass_shader_.set_ps_shader_from_file("./resources/shaders/deferred/light_pass.hlsl", "PSMain", nullptr, nullptr);
+        light_pass_shader_.set_input_layout(inputs, std::size(inputs));
 #ifndef NDEBUG
-    generate_gbuffers_shader_.set_name("generate_gbuffers");
+        light_pass_shader_.set_name("light_pass");
 #endif
+    }
 
-    assemble_gbuffers_shader_.set_vs_shader_from_file("./resources/shaders/deferred/assemble_gbuffers.hlsl", "VSMain", nullptr, nullptr);
-    assemble_gbuffers_shader_.set_ps_shader_from_file("./resources/shaders/deferred/assemble_gbuffers.hlsl", "PSMain", nullptr, nullptr);
+    {
+        assemble_gbuffers_shader_.set_vs_shader_from_file("./resources/shaders/deferred/assemble_gbuffers.hlsl", "VSMain", nullptr, nullptr);
+        assemble_gbuffers_shader_.set_ps_shader_from_file("./resources/shaders/deferred/assemble_gbuffers.hlsl", "PSMain", nullptr, nullptr);
+#ifndef NDEBUG
+        assemble_gbuffers_shader_.set_name("assemble_gbuffers");
+#endif
+    }
 
-    CD3D11_RASTERIZER_DESC rast_desc = {};
-    rast_desc.CullMode = D3D11_CULL_NONE;
-    rast_desc.FillMode = D3D11_FILL_SOLID;
-    D3D11_CHECK(device->CreateRasterizerState(&rast_desc, &rasterizer_state_));
+    CD3D11_RASTERIZER_DESC opaque_rast_desc = {};
+    opaque_rast_desc.CullMode = D3D11_CULL_BACK;
+    opaque_rast_desc.FillMode = D3D11_FILL_SOLID;
+    opaque_rast_desc.FrontCounterClockwise = true;
+    D3D11_CHECK(device->CreateRasterizerState(&opaque_rast_desc, &opaque_rasterizer_state_));
 
-    CD3D11_RASTERIZER_DESC light_rast_desc = {};
-    light_rast_desc.CullMode = D3D11_CULL_NONE;
-    light_rast_desc.FillMode = D3D11_FILL_SOLID;
-    light_rast_desc.DepthBias = 0;
-    D3D11_CHECK(device->CreateRasterizerState(&light_rast_desc, &light_rasterizer_state_));
+    CD3D11_RASTERIZER_DESC assemble_rast_desc = {};
+    assemble_rast_desc.CullMode = D3D11_CULL_NONE;
+    assemble_rast_desc.FillMode = D3D11_FILL_SOLID;
+    D3D11_CHECK(device->CreateRasterizerState(&assemble_rast_desc, &assemble_rasterizer_state_));
 
     uniform_buffer_.initialize(sizeof(uniform_data_), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-
-    assert(lights_.size() > 0);
-    std::vector<Light::LightData> lights_data;
-    for (auto& light : lights_) {
-        lights_data.push_back(light->get_data());
-    }
-    assert(lights_data.size() > 0);
-    lights_buffer_.initialize(D3D11_BIND_SHADER_RESOURCE,
-                                lights_data.data(), sizeof(Light::LightData), static_cast<UINT>(lights_data.size()),
-                                D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-
-    light_data_buffer_.initialize(sizeof(Light::LightData), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-    // light_transform_buffer_.initialize(sizeof(Light::CascadeData), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
     D3D11_SAMPLER_DESC tex_sampler_desc{};
     tex_sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -173,16 +164,22 @@ void Scene::destroy()
 {
     models_.clear();
     lights_.clear();
-    light_data_buffer_.destroy();
-    lights_buffer_.destroy();
     uniform_buffer_.destroy();
-    SAFE_RELEASE(light_rasterizer_state_);
-    SAFE_RELEASE(rasterizer_state_);
+    SAFE_RELEASE(opaque_rasterizer_state_);
+    SAFE_RELEASE(assemble_rasterizer_state_);
     SAFE_RELEASE(texture_sampler_state_);
     SAFE_RELEASE(depth_sampler_state_);
     SAFE_RELEASE(deferred_depth_state_);
-    generate_gbuffers_shader_.destroy();
-    light_shader_.destroy();
+    SAFE_RELEASE(deferred_depth_view_);
+    SAFE_RELEASE(deferred_depth_target_view_);
+    SAFE_RELEASE(deferred_depth_buffer_);
+    for (uint32_t i = 0; i < gbuffer_count_; ++i) {
+        SAFE_RELEASE(deferred_gbuffers_target_view_[i]);
+        SAFE_RELEASE(deferred_gbuffers_view_[i]);
+        SAFE_RELEASE(deferred_gbuffers_[i]);
+    }
+    opaque_pass_shader_.destroy();
+    light_pass_shader_.destroy();
 }
 
 void Scene::add_model(Model* model)
@@ -199,6 +196,7 @@ void Scene::update()
 {
     auto camera = Game::inst()->render().camera();
     uniform_data_.view_proj = camera->view_proj();
+    uniform_data_.inv_view_proj = camera->view_proj().Invert();
     uniform_data_.camera_pos = camera->position();
     uniform_data_.camera_dir = camera->direction();
     uniform_data_.time += Game::inst()->delta_time();
@@ -237,11 +235,10 @@ void Scene::draw()
         }
 
         context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        context->RSSetState(rasterizer_state_);
+        context->RSSetState(opaque_rasterizer_state_);
 
         // draw models
-        generate_gbuffers_shader_.use();
-        uniform_data_.view_proj = camera->view_proj();
+        opaque_pass_shader_.use();
         uniform_buffer_.update_data(&uniform_data_);
         uniform_buffer_.bind(0);
 
@@ -252,7 +249,12 @@ void Scene::draw()
 
     // lights pass
     {
-
+        light_pass_shader_.use();
+        uniform_buffer_.bind(0);
+        for (auto& l : lights_)
+        {
+            l->draw();
+        }
     }
 
     // assemble gbuffers
@@ -260,7 +262,7 @@ void Scene::draw()
         // restore default render target and depth stencil
         Game::inst()->render().prepare_resources();
         context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        context->RSSetState(rasterizer_state_);
+        context->RSSetState(assemble_rasterizer_state_);
 
         assemble_gbuffers_shader_.use();
         context->PSSetShaderResources(0, gbuffer_count_, deferred_gbuffers_view_);
@@ -269,9 +271,6 @@ void Scene::draw()
         context->PSSetSamplers(0, 1, &texture_sampler_state_);
         context->PSSetSamplers(1, 1, &depth_sampler_state_);
 
-        // restore pos from depth
-        uniform_data_.view_proj = uniform_data_.view_proj.Invert();
-        uniform_buffer_.update_data(&uniform_data_);
         uniform_buffer_.bind(0);
 
         context->Draw(3, 0);

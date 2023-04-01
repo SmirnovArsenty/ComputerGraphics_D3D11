@@ -23,6 +23,7 @@ struct PS_OUT
 cbuffer SceneData : register(b0)
 {
     float4x4 view_proj;
+    float4x4 inv_view_proj;
     float3 camera_pos;
     float time;
     float3 camera_dir;
@@ -58,6 +59,7 @@ PS_IN VSMain(VS_IN input)
     return res;
 }
 
+[earlydepthstencil]
 PS_OUT PSMain(PS_IN input)
 {
     PS_OUT res = (PS_OUT)0;

@@ -144,3 +144,7 @@ Matrix Light::get_transform(uint32_t index)
 {
     return data_.transform[index];
 }
+
+void Light::draw()
+{
+}
