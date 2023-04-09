@@ -14,10 +14,11 @@ struct PS_IN
 
 struct PS_OUT
 {
-    float4 normal   : SV_Target0;
-    float4 diffuse  : SV_Target1;
-    float4 specular : SV_Target2;
-    float4 ambient  : SV_Target3;
+    float4 position : SV_Target0;
+    float4 normal   : SV_Target1;
+    float4 diffuse  : SV_Target2;
+    float4 specular : SV_Target3;
+    float4 ambient  : SV_Target4;
 };
 
 cbuffer SceneData : register(b0)
@@ -25,9 +26,9 @@ cbuffer SceneData : register(b0)
     float4x4 view_proj;
     float4x4 inv_view_proj;
     float3 camera_pos;
-    float time;
+    float screen_width;
     float3 camera_dir;
-    uint SceneData_dummy;
+    float screen_heght;
 };
 
 cbuffer ModelData : register(b1)
@@ -64,8 +65,11 @@ PS_OUT PSMain(PS_IN input)
 {
     PS_OUT res = (PS_OUT)0;
 
-    float3 normal = normalize(input.normal.xyz);
-    res.normal = float4(normal * (0.5).xxx + (0.5).xxx, 1.f);
+    res.position = input.world_model_pos;
+
+    // float3 normal = normalize(input.normal.xyz);
+    // res.normal = float4(normal * (0.5).xxx + (0.5).xxx, 1.f);
+    res.normal = float4(normalize(input.normal.xyz), 1.f);
 
     { // Phong light model
         float4 diffuse_color = (0).xxxx;
@@ -74,6 +78,7 @@ PS_OUT PSMain(PS_IN input)
 
         if (material_flags & 1) {
             diffuse_color = diffuse_tex.Sample(tex_sampler, input.uv);
+            diffuse_color = pow(abs(diffuse_color), 2.2f);
         }
         if (material_flags & 2) {
             specular_color = specular_tex.Sample(tex_sampler, input.uv);

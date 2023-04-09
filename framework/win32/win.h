@@ -22,4 +22,7 @@ public:
 
     HWND window() const;
     Input* input() const;
+
+    float screen_width() const;
+    float screen_height() const;
 };

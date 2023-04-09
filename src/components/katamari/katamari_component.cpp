@@ -11,72 +11,19 @@ KatamariComponent::KatamariComponent()
 {
 }
 
-Light* sun_light9{ nullptr };
-Light* sun_light10{ nullptr };
-
 void KatamariComponent::initialize()
 {
     scene_ = new Scene();
 
-    static Light sun_light;
-    sun_light.set_type(Light::Type::direction);
-    sun_light.set_color(Vector3(1.f, 0.f, 0.f));
-    sun_light.setup_direction(Vector3(1.f, -1.f, 0.f));
-    scene_->add_light(&sun_light);
+    lights_.push_back(new AmbientLight(Vector3(0.2f, 0.2f, 0.2f)));
+    scene_->add_light(lights_.back());
 
-    static Light sun_light2;
-    sun_light2.set_type(Light::Type::direction);
-    sun_light2.set_color(Vector3(0.f, 0.f, 1.f));
-    sun_light2.setup_direction(Vector3(0.f, -1.f, 1.f));
-    scene_->add_light(&sun_light2);
+    // like yellow sun
+    lights_.push_back(new DirectionLight(Vector3(1.f, 1.f, 0.8f), Vector3(1.f, -1.f, 1.f)));
+    scene_->add_light(lights_.back());
 
-    static Light sun_light3;
-    sun_light3.set_type(Light::Type::direction);
-    sun_light3.set_color(Vector3(0.f, 1.f, 0.f));
-    sun_light3.setup_direction(Vector3(1.f, -1.f, 1.f));
-    scene_->add_light(&sun_light3);
-
-    static Light sun_light4;
-    sun_light4.set_type(Light::Type::direction);
-    sun_light4.set_color(Vector3(1.f, 0.f, 1.f));
-    sun_light4.setup_direction(Vector3(-1.f, -1.f, -1.f));
-    scene_->add_light(&sun_light4);
-
-    static Light sun_light5;
-    sun_light5.set_type(Light::Type::direction);
-    sun_light5.set_color(Vector3(0.f, 1.f, 1.f));
-    sun_light5.setup_direction(Vector3(1.f, -1.f, -1.f));
-    scene_->add_light(&sun_light5);
-
-    static Light sun_light6;
-    sun_light6.set_type(Light::Type::direction);
-    sun_light6.set_color(Vector3(1.f, 1.f, 0.f));
-    sun_light6.setup_direction(Vector3(-1.f, -1.f, 1.f));
-    scene_->add_light(&sun_light6);
-
-    static Light sun_light7;
-    sun_light7.set_type(Light::Type::direction);
-    sun_light7.set_color(Vector3(1.f, 1.f, 0.f));
-    sun_light7.setup_direction(Vector3(-1.f, -1.f, 0.f));
-    scene_->add_light(&sun_light7);
-
-    static Light sun_light8;
-    sun_light8.set_type(Light::Type::direction);
-    sun_light8.set_color(Vector3(1.f, 1.f, 0.f));
-    sun_light8.setup_direction(Vector3(0.f, -1.f, -1.f));
-    scene_->add_light(&sun_light8);
-
-    sun_light9 = new Light();
-    sun_light9->set_type(Light::Type::direction);
-    sun_light9->set_color(Vector3(10.f, 0.f, 0.f));
-    sun_light9->setup_direction(Vector3(10.f, -1.f, 0.f));
-    scene_->add_light(sun_light9);
-
-    sun_light10 = new Light();
-    sun_light10->set_type(Light::Type::direction);
-    sun_light10->set_color(Vector3(0.f, 0.f, 10.f));
-    sun_light10->setup_direction(Vector3(-10.f, -1.f, 0.f));
-    scene_->add_light(sun_light10);
+    lights_.push_back(new PointLight(Vector3(0.f, .5f, 0.f), Vector3(0.f, 0.1f, 0.f), 3));
+    scene_->add_light(lights_.back());
 
     scene_->initialize();
 
@@ -161,9 +108,6 @@ void KatamariComponent::update()
 {
     static float time = 0;
     time += Game::inst()->delta_time();
-
-    sun_light9->setup_direction(Vector3(10.f * sin(time * 10), -1, 10.f * cos(time * 10)));
-    sun_light10->setup_direction(Vector3(-10.f * sin(time * 10), -1, -10.f * cos(time * 10)));
 
     scene_->update();
     for (auto& model : free_models_)
@@ -282,8 +226,12 @@ void KatamariComponent::destroy_resources()
     free_models_.clear();
     scene_->destroy();
 
-    delete sun_light9;
-    sun_light9 = nullptr;
+    for (auto& light : lights_)
+    {
+        delete light;
+        light = nullptr;
+    }
+    lights_.clear();
 
     delete scene_;
     scene_ = nullptr;

@@ -32,7 +32,7 @@ class ConstBuffer : public Buffer
 {
 public:
     ConstBuffer() = default;
-    void initialize(UINT size, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_WRITE);
+    void initialize(UINT size, D3D11_USAGE usage = D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_WRITE);
     void update_data(void* data);
 };
 

@@ -3,6 +3,7 @@
 #include "render/render.h"
 #include "render/camera.h"
 #include "render/d3d11_common.h"
+#include "render/annotation.h"
 
 #include "scene.h"
 #include "model.h"
@@ -33,22 +34,10 @@ void Scene::initialize()
     }
 
     {
-        D3D11_INPUT_ELEMENT_DESC inputs[] = {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
-        };
-        light_pass_shader_.set_vs_shader_from_file("./resources/shaders/deferred/light_pass.hlsl", "VSMain", nullptr, nullptr);
-        light_pass_shader_.set_ps_shader_from_file("./resources/shaders/deferred/light_pass.hlsl", "PSMain", nullptr, nullptr);
-        light_pass_shader_.set_input_layout(inputs, std::size(inputs));
+        present_shader_.set_vs_shader_from_file("./resources/shaders/deferred/present_shader.hlsl", "VSMain", nullptr, nullptr);
+        present_shader_.set_ps_shader_from_file("./resources/shaders/deferred/present_shader.hlsl", "PSMain", nullptr, nullptr);
 #ifndef NDEBUG
-        light_pass_shader_.set_name("light_pass");
-#endif
-    }
-
-    {
-        assemble_gbuffers_shader_.set_vs_shader_from_file("./resources/shaders/deferred/assemble_gbuffers.hlsl", "VSMain", nullptr, nullptr);
-        assemble_gbuffers_shader_.set_ps_shader_from_file("./resources/shaders/deferred/assemble_gbuffers.hlsl", "PSMain", nullptr, nullptr);
-#ifndef NDEBUG
-        assemble_gbuffers_shader_.set_name("assemble_gbuffers");
+        present_shader_.set_name("present");
 #endif
     }
 
@@ -75,26 +64,24 @@ void Scene::initialize()
     tex_sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
     D3D11_CHECK(device->CreateSamplerState(&tex_sampler_desc, &texture_sampler_state_));
 
-    D3D11_SAMPLER_DESC depth_sampler_desc{};
-    depth_sampler_desc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
-    depth_sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-    depth_sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-    depth_sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-    depth_sampler_desc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
-    depth_sampler_desc.MinLOD = 0;
-    depth_sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
-    D3D11_CHECK(device->CreateSamplerState(&depth_sampler_desc, &depth_sampler_state_));
+    // D3D11_SAMPLER_DESC depth_sampler_desc{};
+    // depth_sampler_desc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+    // depth_sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    // depth_sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    // depth_sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    // depth_sampler_desc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+    // depth_sampler_desc.MinLOD = 0;
+    // depth_sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
+    // D3D11_CHECK(device->CreateSamplerState(&depth_sampler_desc, &depth_sampler_state_));
 
     // deferred initialize
-    RECT rc;
-    GetWindowRect(Game::inst()->win().window(), &rc);
-    UINT width = UINT(rc.right - rc.left);
-    UINT height = UINT(rc.bottom - rc.top);
+    UINT width = UINT(Game::inst()->win().screen_width());
+    UINT height = UINT(Game::inst()->win().screen_height());
 
     D3D11_TEXTURE2D_DESC rtv_tex_desc{};
     rtv_tex_desc.Width = width;
     rtv_tex_desc.Height = height;
-    rtv_tex_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    rtv_tex_desc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
     rtv_tex_desc.MipLevels = 1;
     rtv_tex_desc.ArraySize = 1;
     rtv_tex_desc.SampleDesc.Count = 1;
@@ -109,6 +96,9 @@ void Scene::initialize()
         D3D11_CHECK(device->CreateRenderTargetView((ID3D11Resource*)deferred_gbuffers_[i], nullptr, &deferred_gbuffers_target_view_[i]));
         D3D11_CHECK(device->CreateShaderResourceView((ID3D11Resource*)deferred_gbuffers_[i], nullptr, &deferred_gbuffers_view_[i]));
     }
+    D3D11_CHECK(device->CreateTexture2D(&rtv_tex_desc, nullptr, &light_buffer_));
+    D3D11_CHECK(device->CreateRenderTargetView((ID3D11Resource*)light_buffer_, nullptr, &light_buffer_target_view_));
+    D3D11_CHECK(device->CreateShaderResourceView((ID3D11Resource*)light_buffer_, nullptr, &light_buffer_view_));
 
     D3D11_DEPTH_STENCIL_DESC depth_stencil_desc = {};
     depth_stencil_desc.DepthEnable = true;
@@ -158,17 +148,47 @@ void Scene::initialize()
     srv_desc.Texture2DArray.FirstArraySlice = 0;
     srv_desc.Texture2DArray.ArraySize = 1;
     D3D11_CHECK(device->CreateShaderResourceView(deferred_depth_buffer_, &srv_desc, &deferred_depth_view_));
+
+    // light pass blend state
+    D3D11_RENDER_TARGET_BLEND_DESC rt_blend_desc;
+    rt_blend_desc.BlendEnable = true;
+    rt_blend_desc.SrcBlend = D3D11_BLEND_ONE;
+    rt_blend_desc.DestBlend = D3D11_BLEND_ONE;
+    rt_blend_desc.BlendOp = D3D11_BLEND_OP_ADD;
+    rt_blend_desc.SrcBlendAlpha = D3D11_BLEND_ONE;
+    rt_blend_desc.DestBlendAlpha = D3D11_BLEND_ONE;
+    rt_blend_desc.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    rt_blend_desc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+    D3D11_BLEND_DESC blend_desc;
+    blend_desc.AlphaToCoverageEnable = false;
+    blend_desc.IndependentBlendEnable = false;
+    blend_desc.RenderTarget[0] = rt_blend_desc;
+    D3D11_CHECK(device->CreateBlendState(&blend_desc, &light_blend_state_));
+
+    D3D11_DEPTH_STENCIL_DESC light_depth_stencil_desc{};
+    light_depth_stencil_desc.DepthEnable = true;
+    light_depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+    light_depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS;
+    device->CreateDepthStencilState(&light_depth_stencil_desc, &light_depth_state_);
+
+    for (auto& l : lights_) {
+        l->initialize();
+    }
 }
 
 void Scene::destroy()
 {
     models_.clear();
+    for (auto& l : lights_) {
+        l->destroy_resources();
+    }
     lights_.clear();
     uniform_buffer_.destroy();
     SAFE_RELEASE(opaque_rasterizer_state_);
     SAFE_RELEASE(assemble_rasterizer_state_);
     SAFE_RELEASE(texture_sampler_state_);
-    SAFE_RELEASE(depth_sampler_state_);
+    // SAFE_RELEASE(depth_sampler_state_);
     SAFE_RELEASE(deferred_depth_state_);
     SAFE_RELEASE(deferred_depth_view_);
     SAFE_RELEASE(deferred_depth_target_view_);
@@ -179,7 +199,6 @@ void Scene::destroy()
         SAFE_RELEASE(deferred_gbuffers_[i]);
     }
     opaque_pass_shader_.destroy();
-    light_pass_shader_.destroy();
 }
 
 void Scene::add_model(Model* model)
@@ -199,18 +218,25 @@ void Scene::update()
     uniform_data_.inv_view_proj = camera->view_proj().Invert();
     uniform_data_.camera_pos = camera->position();
     uniform_data_.camera_dir = camera->direction();
-    uniform_data_.time += Game::inst()->delta_time();
-    uniform_data_.lights_count = static_cast<uint32_t>(lights_.size());
+    uniform_data_.screen_width = Game::inst()->win().screen_width();
+    uniform_data_.screen_height = Game::inst()->win().screen_height();
+
+    for (auto& l : lights_) {
+        l->update();
+    }
 }
 
 void Scene::draw()
 {
     auto context = Game::inst()->render().context();
     auto camera = Game::inst()->render().camera();
+
     // generate G-Buffers
     {
+        Annotation annotation("Generate G-Buffers");
         // restore default render target and depth stencil
         {
+            context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
             context->OMSetRenderTargets(gbuffer_count_, deferred_gbuffers_target_view_, deferred_depth_target_view_);
 
             float clear_color[4] = { 0.f, 0.f, 0.f, 1.f };
@@ -221,11 +247,9 @@ void Scene::draw()
             context->OMSetDepthStencilState(deferred_depth_state_, 0);
             context->ClearDepthStencilView(deferred_depth_target_view_, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0xFF);
 
-            RECT rc;
-            GetWindowRect(Game::inst()->win().window(), &rc);
             D3D11_VIEWPORT viewport = {};
-            viewport.Width = static_cast<float>(rc.right - rc.left);
-            viewport.Height = static_cast<float>(rc.bottom - rc.top);
+            viewport.Width = Game::inst()->win().screen_width();
+            viewport.Height = Game::inst()->win().screen_height();
             viewport.TopLeftX = 0;
             viewport.TopLeftY = 0;
             viewport.MinDepth = 0;
@@ -249,29 +273,34 @@ void Scene::draw()
 
     // lights pass
     {
-        light_pass_shader_.use();
+        Annotation annotation("Light pass");
+        context->OMSetBlendState(light_blend_state_, nullptr, 0xFFFFFFFF);
+        context->OMSetRenderTargets(1, &light_buffer_target_view_, deferred_depth_target_view_);
+        context->OMSetDepthStencilState(light_depth_state_, 0);
+        float clear_color[4] = { 0.f, 0.f, 0.f, 1.f };
+        context->ClearRenderTargetView(light_buffer_target_view_, clear_color);
+        context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        context->RSSetState(assemble_rasterizer_state_);
+        context->PSSetShaderResources(0, gbuffer_count_, deferred_gbuffers_view_);
+        // context->PSSetShaderResources(gbuffer_count_, 1, &deferred_depth_view_);
+        context->PSSetSamplers(0, 1, &texture_sampler_state_);
         uniform_buffer_.bind(0);
-        for (auto& l : lights_)
-        {
+
+        for (auto& l : lights_) {
             l->draw();
         }
     }
 
-    // assemble gbuffers
+    // present
     {
+        Annotation annotation("Present pass");
+        context->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
         // restore default render target and depth stencil
         Game::inst()->render().prepare_resources();
-        context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        context->RSSetState(assemble_rasterizer_state_);
-
-        assemble_gbuffers_shader_.use();
+        present_shader_.use();
         context->PSSetShaderResources(0, gbuffer_count_, deferred_gbuffers_view_);
         context->PSSetShaderResources(gbuffer_count_, 1, &deferred_depth_view_);
-
-        context->PSSetSamplers(0, 1, &texture_sampler_state_);
-        context->PSSetSamplers(1, 1, &depth_sampler_state_);
-
-        uniform_buffer_.bind(0);
+        context->PSSetShaderResources(gbuffer_count_ + 1, 1, &light_buffer_view_);
 
         context->Draw(3, 0);
     }

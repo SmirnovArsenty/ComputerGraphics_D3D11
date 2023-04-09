@@ -61,7 +61,7 @@ void Shader::set_compute_shader_from_file(const std::string& filename,
         }
         else
         {
-            OutputDebugString("Missing shader file");
+            OutputDebugString("Missing shader file\n");
         }
         assert(false);
     }
@@ -103,7 +103,7 @@ void Shader::set_vs_shader_from_file(const std::string& filename,
         }
         else
         {
-            OutputDebugString("Missing shader file");
+            OutputDebugString("Missing shader file\n");
         }
         assert(false);
     }
@@ -146,7 +146,7 @@ void Shader::set_gs_shader_from_file(const std::string& filename,
         }
         else
         {
-            OutputDebugString("Missing shader file");
+            OutputDebugString("Missing shader file\n");
         }
         assert(false);
     }
@@ -189,7 +189,7 @@ void Shader::set_ps_shader_from_file(const std::string& filename,
         }
         else
         {
-            OutputDebugString("Missing shader file");
+            OutputDebugString("Missing shader file\n");
         }
         assert(false);
     }
@@ -225,10 +225,6 @@ void Shader::set_compute_shader_from_memory(const std::string& data,
             err << (char*)(error_code->GetBufferPointer());
             OutputDebugString(err.str().c_str());
         }
-        else
-        {
-            OutputDebugString("Missing shader file");
-        }
         assert(false);
     }
     auto device = Game::inst()->render().device();
@@ -262,10 +258,6 @@ void Shader::set_vs_shader_from_memory(const std::string& data,
             std::stringstream err;
             err << (char*)(error_code->GetBufferPointer());
             OutputDebugString(err.str().c_str());
-        }
-        else
-        {
-            OutputDebugString("Missing shader file");
         }
         assert(false);
     }
@@ -301,10 +293,6 @@ void Shader::set_gs_shader_from_memory(const std::string& data,
             err << (char*)(error_code->GetBufferPointer());
             OutputDebugString(err.str().c_str());
         }
-        else
-        {
-            OutputDebugString("Missing shader file");
-        }
         assert(false);
     }
     auto device = Game::inst()->render().device();
@@ -338,10 +326,6 @@ void Shader::set_ps_shader_from_memory(const std::string& data,
             std::stringstream err;
             err << (char*)(error_code->GetBufferPointer());
             OutputDebugString(err.str().c_str());
-        }
-        else
-        {
-            OutputDebugString("Missing shader file");
         }
         assert(false);
     }

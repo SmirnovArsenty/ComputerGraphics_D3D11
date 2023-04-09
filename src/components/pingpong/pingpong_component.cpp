@@ -8,7 +8,7 @@
 
 PingpongComponent::PingpongComponent()
 {
-    // setup game data
+    // setup game color
     default_player_.position = Vector2(-1.f + 0.02f, .0f);
     default_player_.width = 0.3f;
     default_player_.height = 0.02f;

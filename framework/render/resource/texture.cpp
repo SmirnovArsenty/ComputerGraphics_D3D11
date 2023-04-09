@@ -19,7 +19,7 @@ Texture::~Texture()
 
 void Texture::load(const std::string& path)
 {
-    // load texture data
+    // load texture color
     assert(!path.empty());
     assert(texture_ == nullptr);
     auto device = Game::inst()->render().device();

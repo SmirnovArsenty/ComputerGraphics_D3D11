@@ -7,6 +7,7 @@ using namespace DirectX::SimpleMath;
 #include "component/game_component.h"
 
 #include "render/scene/model.h"
+#include "render/scene/light.h"
 
 #include "render/resource/buffer.h"
 #include "render/resource/shader.h"
@@ -34,9 +35,10 @@ private:
     };
     std::vector<AttachedEntity> attached_models_;
     std::vector<Model*> free_models_;
-    Model* plane_;
+    std::vector<Light*> lights_;
+    Model* plane_{ nullptr };
 
-    float radius_a_;
-    float radius_b_;
-    float radius_t_;
+    float radius_a_{ 0.f };
+    float radius_b_{ 0.f };
+    float radius_t_{ 0.f };
 };
