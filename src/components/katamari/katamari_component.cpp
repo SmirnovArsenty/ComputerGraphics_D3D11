@@ -15,20 +15,20 @@ void KatamariComponent::initialize()
 {
     scene_ = new Scene();
 
-    lights_.push_back(new AmbientLight(Vector3(0.2f, 0.2f, 0.2f)));
+    lights_.push_back(new AmbientLight(Vector3(0.05f, 0.05f, 0.05f)));
     scene_->add_light(lights_.back());
 
     // like yellow sun
-    lights_.push_back(new DirectionLight(Vector3(1.f, 1.f, 0.8f), Vector3(1.f, -1.f, 1.f)));
-    scene_->add_light(lights_.back());
+    //lights_.push_back(new DirectionLight(Vector3(1.f, 1.f, 0.8f), Vector3(1.f, -1.f, 1.f)));
+    //scene_->add_light(lights_.back());
 
-    lights_.push_back(new PointLight(Vector3(0.f, .5f, 0.f), Vector3(0.f, 0.1f, 0.f), 3));
+    lights_.push_back(new PointLight(Vector3(1.f, 1.f, 1.f), Vector3(0.f, 5.f, 0.f), 10));
     scene_->add_light(lights_.back());
 
     scene_->initialize();
 
     { // setup first attached object
-        attached_models_.push_back({ new Model("./resources/models/Teapot_FBX/teapot.fbx"), Vector3{}, Quaternion{} });
+        attached_models_.push_back({ new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"), Vector3{}, Quaternion{} });
         attached_models_.back().model->set_position(Vector3(0.f, 0.f, 0.f));
         scene_->add_model(attached_models_.back().model);
     }

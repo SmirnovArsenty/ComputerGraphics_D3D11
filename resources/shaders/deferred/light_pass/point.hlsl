@@ -12,7 +12,7 @@ cbuffer LightData : register(b1)
 {
     float4x4 transform;
     float4 light_color;
-    float4 light_position;
+    float4 light_position_radius;
 };
 
 struct PS_IN
@@ -40,24 +40,35 @@ Texture2D<float> shadow_cascade[CASCADE_COUNT] : register(t6);
 
 float4 PSMain(PS_IN input) : SV_Target
 {
+    //return float4(1.0f, 1.0f, 1.0f, 1.0f);
     int3 sample_index = int3(input.position.xy, 0);
 
     float3 result;
 
+
     float4 position = position_tex.Load(sample_index);
-    float3 light_direction = normalize(light_position - position.xyz);
+    float3 to_l = (light_position_radius.xyz - position.xyz);
+    float distance = length(to_l);
+
+    if (distance > light_position_radius.w)
+        discard;
+
+    
+    float radius = light_position_radius.w;
+    float a = 1 - distance / radius;
+
+    float3 light_direction = normalize(to_l);
     float3 normal = normal_tex.Load(sample_index).xyz;
 
     // float depth = depth_tex.Load(sample_index);
 
-    float4 diffuse = diffuse_tex.Load(sample_index);
+    float4 kd = diffuse_tex.Load(sample_index);
     float4 specular = specular_tex.Load(sample_index);
 
+    float diffuse = max(dot(light_direction, normal), 0.0f) * (a * a);
     float3 reflected_light_dir = reflect(light_direction, normal);
     float cos_phi = dot(reflected_light_dir, normalize(camera_pos - position.xyz));
-    result = 
-        light_color * dot(normal, -light_direction) * diffuse.xyz +
-        light_color * specular.xyz * pow(max(cos_phi, 0), 5);
+    result = light_color * kd * diffuse;
 
-    return float4(result, 1.f);
+    return float4(result.xyz, 1.f);
 }

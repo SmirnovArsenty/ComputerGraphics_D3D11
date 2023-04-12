@@ -121,6 +121,6 @@ void PointLight::update()
 {
     point_data_.transform = Matrix::CreateScale(radius_) * Matrix::CreateTranslation(position_);
     point_data_.color = Vector4(color_.x, color_.y, color_.z, 0.f);
-    point_data_.position = Vector4(position_.x, position_.y, position_.z, 0.f);
+    point_data_.position_radius = Vector4(position_.x, position_.y, position_.z, radius_);
     point_buffer_.update_data(&point_data_);
 }

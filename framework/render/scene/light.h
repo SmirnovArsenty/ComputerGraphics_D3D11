@@ -124,7 +124,7 @@ private:
     struct {
         Matrix transform;
         Vector4 color;
-        Vector4 position;
+        Vector4 position_radius;
     } point_data_;
     ConstBuffer point_buffer_;
 
