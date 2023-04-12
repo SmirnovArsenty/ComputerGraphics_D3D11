@@ -1,6 +1,5 @@
 #pragma once
 
-#define NOMINMAX
 #include <string>
 #include <vector>
 
@@ -31,8 +30,8 @@ public:
 
     void draw();
 
-    Vector3 min();
-    Vector3 max();
+    Vector3 extent_min();
+    Vector3 extent_max();
     float radius();
 
 private:

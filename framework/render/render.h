@@ -1,6 +1,5 @@
 #pragma once
 
-#define NOMINMAX
 #include <Windows.h>
 #include <wrl.h>
 #include <d3d11.h>

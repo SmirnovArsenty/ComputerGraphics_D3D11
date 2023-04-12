@@ -22,16 +22,14 @@ void Render::initialize()
         assert(false);
         return;
     }
-    RECT rc;
-    GetWindowRect(hWnd, &rc);
 
     // create device and swapchain
     D3D_FEATURE_LEVEL featureLevel[] = { D3D_FEATURE_LEVEL_11_1 };
 
     DXGI_SWAP_CHAIN_DESC swapDesc = {};
     swapDesc.BufferCount = swapchain_buffer_count_;
-    swapDesc.BufferDesc.Width = rc.right - rc.left;
-    swapDesc.BufferDesc.Height = rc.bottom - rc.top;
+    swapDesc.BufferDesc.Width = UINT(Game::inst()->win().screen_width());
+    swapDesc.BufferDesc.Height = UINT(Game::inst()->win().screen_height());
     swapDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     swapDesc.BufferDesc.RefreshRate.Numerator = 60;
     swapDesc.BufferDesc.RefreshRate.Denominator = 1;
@@ -150,10 +148,9 @@ void Render::resize()
     destroy_depth_stencil_texture_and_view();
 
     {
-        Game* engine = Game::inst();
-        RECT rc;
-        GetWindowRect(Game::inst()->win().window(), &rc);
-        swapchain_->ResizeBuffers(swapchain_buffer_count_, rc.right - rc.left, rc.bottom - rc.top,
+        swapchain_->ResizeBuffers(swapchain_buffer_count_,
+                                  UINT(Game::inst()->win().screen_width()),
+                                  UINT(Game::inst()->win().screen_height()),
                                   DXGI_FORMAT_R8G8B8A8_UNORM,
                                   DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
     }
@@ -220,11 +217,9 @@ void Render::prepare_resources() const
     context_->OMSetDepthStencilState(depth_stencil_state_, 0);
     context_->ClearDepthStencilView(depth_stencil_view_, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0xFF);
 
-    RECT rc;
-    GetWindowRect(Game::inst()->win().window(), &rc);
     D3D11_VIEWPORT viewport = {};
-    viewport.Width = static_cast<float>(rc.right - rc.left);
-    viewport.Height = static_cast<float>(rc.bottom - rc.top);
+    viewport.Width = Game::inst()->win().screen_width();
+    viewport.Height = Game::inst()->win().screen_height();
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
     viewport.MinDepth = 0;
@@ -310,8 +305,6 @@ void Render::create_depth_stencil_texture_and_view()
 {
     destroy_depth_stencil_texture_and_view();
 
-    RECT rc;
-    GetWindowRect(Game::inst()->win().window(), &rc);
     D3D11_TEXTURE2D_DESC depth_texture_desc;
     backbuffer_texture_->GetDesc(&depth_texture_desc);
     depth_texture_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;

@@ -141,3 +141,17 @@ Input* Win::input() const
 {
     return input_;
 }
+
+float Win::screen_width() const
+{
+    RECT rc;
+    GetWindowRect(Game::inst()->win().window(), &rc);
+    return static_cast<float>(rc.right - rc.left);
+}
+
+float Win::screen_height() const
+{
+    RECT rc;
+    GetWindowRect(Game::inst()->win().window(), &rc);
+    return static_cast<float>(rc.bottom - rc.top);
+}

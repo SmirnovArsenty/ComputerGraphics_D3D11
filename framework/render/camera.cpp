@@ -30,10 +30,8 @@ float Camera::get_far() const
 
 float Camera::get_fov() const
 {
-    RECT rc;
-    GetWindowRect(Game::inst()->win().window(), &rc);
-    float width = float(rc.right - rc.left);
-    float height = float(rc.bottom - rc.top);
+    float width = Game::inst()->win().screen_width();
+    float height = Game::inst()->win().screen_height();
     float aspect_ratio = width / height;
     constexpr float fov = 60 / 57.2957795131f; // default fov - 60 degree
     auto vfov = static_cast<float>(2 * atan(tan(fov / 2) * (1.0 / aspect_ratio)));
@@ -129,10 +127,8 @@ const Matrix Camera::view() const
 
 const Matrix Camera::proj() const
 {
-    RECT rc;
-    GetWindowRect(Game::inst()->win().window(), &rc);
-    float width = float(rc.right - rc.left);
-    float height = float(rc.bottom - rc.top);
+    float width = Game::inst()->win().screen_width();
+    float height = Game::inst()->win().screen_height();
 
     switch (type_)
     {
@@ -167,10 +163,8 @@ std::vector<std::pair<Matrix, float>> Camera::cascade_view_proj()
     float nears[Light::shadow_cascade_count] = { get_near(), get_near(), get_near() };
     for (uint32_t i = 0; i < Light::shadow_cascade_count; ++i)
     {
-        RECT rc;
-        GetWindowRect(Game::inst()->win().window(), &rc);
-        float width = float(rc.right - rc.left);
-        float height = float(rc.bottom - rc.top);
+        float width = Game::inst()->win().screen_width();
+        float height = Game::inst()->win().screen_height();
         Matrix projection = Matrix::Identity;
         switch (type_)
         {

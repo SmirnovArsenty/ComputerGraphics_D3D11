@@ -32,6 +32,14 @@ class ConstBuffer : public Buffer
 {
 public:
     ConstBuffer() = default;
-    void initialize(UINT size, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_WRITE);
+    void initialize(UINT size, D3D11_USAGE usage = D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_WRITE);
+    void update_data(void* data);
+};
+
+class StructuredBuffer : public Buffer
+{
+public:
+    StructuredBuffer() = default;
+    void initialize(D3D11_BIND_FLAG bind_flags, void* data, UINT stride, UINT count, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = (D3D11_CPU_ACCESS_FLAG)0);
     void update_data(void* data);
 };

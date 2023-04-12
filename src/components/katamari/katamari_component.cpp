@@ -1,4 +1,3 @@
-#define NOMINMAX
 #include "katamari_component.h"
 #include "core/game.h"
 #include "render/render.h"
@@ -16,15 +15,20 @@ void KatamariComponent::initialize()
 {
     scene_ = new Scene();
 
-    static Light sun_light;
-    sun_light.set_type(Light::Type::direction);
-    sun_light.set_color(Vector3(1.f, 1.f, 1.f));
-    sun_light.setup_direction(Vector3(1.f, -1.f, 0.f));
-    scene_->add_light(&sun_light);
+    lights_.push_back(new AmbientLight(Vector3(0.05f, 0.05f, 0.05f)));
+    scene_->add_light(lights_.back());
+
+    // like yellow sun
+    //lights_.push_back(new DirectionLight(Vector3(1.f, 1.f, 0.8f), Vector3(1.f, -1.f, 1.f)));
+    //scene_->add_light(lights_.back());
+
+    lights_.push_back(new PointLight(Vector3(1.f, 1.f, 1.f), Vector3(0.f, 5.f, 0.f), 10));
+    scene_->add_light(lights_.back());
+
     scene_->initialize();
 
     { // setup first attached object
-        attached_models_.push_back({ new Model("./resources/models/Teapot_FBX/teapot.fbx"), Vector3{}, Quaternion{} });
+        attached_models_.push_back({ new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"), Vector3{}, Quaternion{} });
         attached_models_.back().model->set_position(Vector3(0.f, 0.f, 0.f));
         scene_->add_model(attached_models_.back().model);
     }
@@ -102,18 +106,20 @@ void KatamariComponent::reload()
 
 void KatamariComponent::update()
 {
+    static float time = 0;
+    time += Game::inst()->delta_time();
+
     scene_->update();
     for (auto& model : free_models_)
     {
         auto old_pos = model->position();
-        model->set_position(Vector3(old_pos.x, (model->max().y - model->min().y) / 2, old_pos.z));
+        model->set_position(Vector3(old_pos.x, (model->extent_max().y - model->extent_min().y) / 2, old_pos.z));
     }
     auto camera = Game::inst()->render().camera();
 
     const auto& keyboard = Game::inst()->win().input()->keyboard();
 
-    float rotation_delta = Game::inst()->delta_time();
-    float move_delta = Game::inst()->delta_time();
+    float rotation_delta = Game::inst()->delta_time() * 3;
     if (keyboard.up.pressed)
     {
         Vector3 pos = attached_models_[0].model->position();
@@ -219,6 +225,14 @@ void KatamariComponent::destroy_resources()
     }
     free_models_.clear();
     scene_->destroy();
+
+    for (auto& light : lights_)
+    {
+        delete light;
+        light = nullptr;
+    }
+    lights_.clear();
+
     delete scene_;
     scene_ = nullptr;
 }

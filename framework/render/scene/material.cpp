@@ -36,57 +36,20 @@ void Material::bind()
     auto context = Game::inst()->render().context();
     context->PSSetSamplers(0, 1, &sampler_state_);
 
-    if (is_pbr()) {
-        if (base_color_) {
-            base_color_->bind(1);
-        } else {
-            default_texture_.bind(1);
-        }
+    { // Phong
+        // bind defaults, then overwrite
+        default_texture_.bind(1);
+        default_texture_.bind(2);
+        default_texture_.bind(3);
 
-        if (normal_camera_) {
-            normal_camera_->bind(2);
-        } else {
-            default_texture_.bind(2);
-        }
-
-        if (emission_color_) {
-            emission_color_->bind(3);
-        } else {
-            default_texture_.bind(3);
-        }
-
-        if (metalness_) {
-            metalness_->bind(4);
-        } else {
-            default_texture_.bind(4);
-        }
-
-        if (diffuse_roughness_) {
-            diffuse_roughness_->bind(5);
-        } else {
-            default_texture_.bind(5);
-        }
-
-        if (ambient_occlusion_) {
-            ambient_occlusion_->bind(6);
-        } else {
-            default_texture_.bind(6);
-        }
-    } else { // Phong
         if (diffuse_) {
             diffuse_->bind(1);
-        } else {
-            default_texture_.bind(1);
         }
         if (specular_) {
             specular_->bind(2);
-        } else {
-            default_texture_.bind(2);
         }
         if (ambient_) {
             ambient_->bind(3);
-        } else {
-            default_texture_.bind(3);
         }
     }
 }
