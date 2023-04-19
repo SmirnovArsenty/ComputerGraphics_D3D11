@@ -34,13 +34,10 @@ Buffer<float4>				g_RenderBuffer		: register( t0 );
 VS_OUTPUT QuadVS( uint VertexId : SV_VertexID )
 {
     VS_OUTPUT Output;
-
-	float2 corner = float2( (VertexId << 1) & 2, VertexId & 2 );
+    float2 corner = float2( (VertexId << 1) & 2, VertexId & 2 );
     Output.Position = float4( corner * float2( 2.0, -2.0 ) + float2( -1.0, 1.0 ), 0.0, 1.0 );
-  
-    return Output;    
+    return Output;
 }
-
 
 float4 QuadPS( float4 Position : SV_POSITION ) : SV_Target
 {

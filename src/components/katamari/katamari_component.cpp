@@ -4,6 +4,7 @@
 #include "render/camera.h"
 #include "render/scene/scene.h"
 #include "render/scene/model.h"
+#include "render/scene/light.h"
 #include "win32/win.h"
 #include "win32/input.h"
 
@@ -13,31 +14,29 @@ KatamariComponent::KatamariComponent()
 
 void KatamariComponent::initialize()
 {
-    scene_ = new Scene();
+    auto& scene = Game::inst()->scene();
 
     lights_.push_back(new AmbientLight(Vector3(0.05f, 0.05f, 0.05f)));
-    scene_->add_light(lights_.back());
+    scene.add_light(lights_.back());
 
     // like yellow sun
-    //lights_.push_back(new DirectionLight(Vector3(1.f, 1.f, 0.8f), Vector3(1.f, -1.f, 1.f)));
-    //scene_->add_light(lights_.back());
+    lights_.push_back(new DirectionLight(Vector3(1.f, 1.f, 0.8f), Vector3(1.f, -1.f, 1.f)));
+    scene.add_light(lights_.back());
 
     lights_.push_back(new PointLight(Vector3(1.f, 1.f, 1.f), Vector3(0.f, 5.f, 0.f), 10));
-    scene_->add_light(lights_.back());
-
-    scene_->initialize();
+    scene.add_light(lights_.back());
 
     { // setup first attached object
         attached_models_.push_back({ new Model("./resources/models/WoodenLog_FBX/WoodenLog_fbx.fbx"), Vector3{}, Quaternion{} });
         attached_models_.back().model->set_position(Vector3(0.f, 0.f, 0.f));
-        scene_->add_model(attached_models_.back().model);
+        scene.add_model(attached_models_.back().model);
     }
 
     { // debug plane
         plane_ = new Model("./resources/models/Plane_FBX/1000_plane.fbx");
         plane_->set_scale(Vector3(10.f));
         plane_->set_rotation(Quaternion::CreateFromAxisAngle(Vector3(1.f, 0.f, 0.f), 1.57079632679f));
-        scene_->add_model(plane_);
+        scene.add_model(plane_);
         plane_->load();
     }
 
@@ -93,7 +92,6 @@ void KatamariComponent::initialize()
 
 void KatamariComponent::draw()
 {
-    scene_->draw();
 }
 
 void KatamariComponent::imgui()
@@ -109,7 +107,6 @@ void KatamariComponent::update()
     static float time = 0;
     time += Game::inst()->delta_time();
 
-    scene_->update();
     for (auto& model : free_models_)
     {
         auto old_pos = model->position();
@@ -224,7 +221,6 @@ void KatamariComponent::destroy_resources()
         model = nullptr;
     }
     free_models_.clear();
-    scene_->destroy();
 
     for (auto& light : lights_)
     {
@@ -232,7 +228,4 @@ void KatamariComponent::destroy_resources()
         light = nullptr;
     }
     lights_.clear();
-
-    delete scene_;
-    scene_ = nullptr;
 }

@@ -7,12 +7,14 @@
 class Win;
 class Render;
 class GameComponent;
+class Scene;
 
 class Game
 {
 private:
     std::unique_ptr<Win> win_;
     std::unique_ptr<Render> render_;
+    std::unique_ptr<Scene> scene_;
 
     float delta_time_{ 0.f };
 
@@ -44,4 +46,5 @@ public:
 
     const Win& win() const;
     const Render& render() const;
+    Scene& scene() const;
 };

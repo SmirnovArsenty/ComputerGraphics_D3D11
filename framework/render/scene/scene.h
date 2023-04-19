@@ -26,11 +26,14 @@ public:
 
     void add_light(Light* light);
 
+    void add_particle_system(class ParticleSystem* particle_system);
+
     void update();
     void draw();
 private:
     std::vector<class Model*> models_;
     std::vector<Light*> lights_;
+    std::vector<class ParticleSystem*> particle_systems_;
 
     ConstBuffer uniform_buffer_;
     struct

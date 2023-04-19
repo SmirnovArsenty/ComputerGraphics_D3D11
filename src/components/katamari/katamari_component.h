@@ -25,8 +25,6 @@ public:
     void update() override;
     void destroy_resources() override;
 private:
-    class Scene* scene_{ nullptr };
-
     struct AttachedEntity
     {
         Model* model;

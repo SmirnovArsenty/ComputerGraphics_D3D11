@@ -42,6 +42,8 @@ set(group_render_scene
     render/scene/mesh.h
     render/scene/model.cpp
     render/scene/model.h
+    render/scene/particle_system.cpp
+    render/scene/particle_system.h
     render/scene/scene.cpp
     render/scene/scene.h
 )
@@ -50,6 +52,11 @@ set(group_render_scene_lights
     render/scene/lights/ambient.cpp
     render/scene/lights/direction.cpp
     render/scene/lights/point.cpp
+)
+
+set(group_render_utils
+    render/utils/sort_lib.cpp
+    render/utils/sort_lib.h
 )
 
 set(group_component_common
@@ -70,6 +77,7 @@ set(sources
     ${group_render_resource}
     ${group_render_scene}
     ${group_render_scene_lights}
+    ${group_render_utils}
 
     ${group_component_common}
 
@@ -83,6 +91,7 @@ source_group("render" FILES ${group_render})
 source_group("render/resource" FILES ${group_render_resource})
 source_group("render/scene" FILES ${group_render_scene})
 source_group("render/scene/lights" FILES ${group_render_scene_lights})
+source_group("render/utils" FILES ${group_render_utils})
 source_group("component/common" FILES ${group_component_common})
 source_group("win32" FILES ${group_win32})
 

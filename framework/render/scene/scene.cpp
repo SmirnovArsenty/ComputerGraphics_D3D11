@@ -7,6 +7,7 @@
 
 #include "scene.h"
 #include "model.h"
+#include "particle_system.h"
 
 Scene::Scene() : uniform_data_{}
 {
@@ -175,6 +176,9 @@ void Scene::initialize()
     for (auto& l : lights_) {
         l->initialize();
     }
+    for (auto& p : particle_systems_) {
+        p->initialize();
+    }
 }
 
 void Scene::destroy()
@@ -182,6 +186,9 @@ void Scene::destroy()
     models_.clear();
     for (auto& l : lights_) {
         l->destroy_resources();
+    }
+    for (auto& p : particle_systems_) {
+        p->destroy_resources();
     }
     lights_.clear();
     uniform_buffer_.destroy();
@@ -211,6 +218,11 @@ void Scene::add_light(Light* light)
     lights_.push_back(light);
 }
 
+void Scene::add_particle_system(ParticleSystem* particle_system)
+{
+    particle_systems_.push_back(particle_system);
+}
+
 void Scene::update()
 {
     auto camera = Game::inst()->render().camera();
@@ -223,6 +235,10 @@ void Scene::update()
 
     for (auto& l : lights_) {
         l->update();
+    }
+
+    for (auto& p : particle_systems_) {
+        p->update();
     }
 }
 
@@ -288,6 +304,14 @@ void Scene::draw()
 
         for (auto& l : lights_) {
             l->draw();
+        }
+    }
+
+    // particles
+    {
+        Annotation annotation("Particles");
+        for (auto& p : particle_systems_) {
+            p->draw();
         }
     }
 
