@@ -30,6 +30,8 @@ set(group_render_resource
     render/resource/buffer.h
     render/resource/shader.cpp
     render/resource/shader.h
+    render/resource/shader_cache.cpp
+    render/resource/shader_cache.h
     render/resource/texture.cpp
     render/resource/texture.h
 )

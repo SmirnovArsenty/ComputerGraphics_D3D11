@@ -46,13 +46,13 @@ public:
     void update() override;
     void destroy_resources() override;
 private:
-    static std::unique_ptr<Shader> shader_;
-
     struct {
         Vector4 color;
     } ambient_data_;
     ConstBuffer ambient_buffer_;
     Vector3 color_;
+
+    Shader* shader_;
 };
 
 class DirectionLight : public Light
@@ -85,8 +85,6 @@ public:
     void set_direction(const Vector3& direction);
 
 private:
-    static std::unique_ptr<Shader> shader_;
-
     struct
     {
         Vector4 color;
@@ -104,6 +102,8 @@ private:
     // deferred
     ID3D11DepthStencilState* ds_state_{ nullptr };
     ID3D11BlendState* blend_state_{ nullptr };
+
+    Shader* shader_;
 };
 
 class PointLight : public Light
@@ -119,8 +119,6 @@ public:
     void destroy_resources() override;
 
 private:
-    static std::unique_ptr<Shader> shader_;
-
     struct {
         Matrix transform;
         Vector4 color;
@@ -138,4 +136,6 @@ private:
     Buffer index_buffer_;
 
     ID3D11RasterizerState* rasterizer_state_{ nullptr };
+
+    Shader* shader_;
 };

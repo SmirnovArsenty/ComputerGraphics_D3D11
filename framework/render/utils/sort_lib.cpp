@@ -14,7 +14,6 @@ SortLib::SortLib()
 
 SortLib::~SortLib()
 {
-    release();
 }
 
 void SortLib::init()
@@ -31,17 +30,17 @@ void SortLib::init()
     D3D11_CHECK(device->CreateBuffer(&cbDesc, nullptr, &dispatch_info_));
 
     // Step sort shader
-    sort_step_.set_compute_shader_from_file("SortStepCS2.hlsl", "BitonicSortStep", nullptr, nullptr);
+    sort_step_.set_compute_shader_from_file("./resources/shaders/sort/sort_step.hlsl", "CSMain", nullptr, nullptr);
 
     // Create inner sort shader
     D3D_SHADER_MACRO innerDefines[] = {"SORT_SIZE", "512", nullptr,0};
-    sort_inner512_.set_compute_shader_from_file("SortInnerCS.hlsl", "BitonicInnerSort", innerDefines, nullptr);
+    sort_inner512_.set_compute_shader_from_file("./resources/shaders/sort/sort_inner.hlsl", "CSMain", innerDefines, nullptr);
 
     // create
     D3D_SHADER_MACRO cs512Defines[] = {"SORT_SIZE", "512", nullptr, 0};
-    sort512_.set_compute_shader_from_file("SortCS.hlsl", "BitonicSortLDS", cs512Defines, nullptr);
+    sort512_.set_compute_shader_from_file("./resources/shaders/sort/sort.hlsl", "CSMain", cs512Defines, nullptr);
 
-    init_args_.set_compute_shader_from_file("InitSortArgsCS.hlsl", "InitDispatchArgs", nullptr, nullptr);
+    init_args_.set_compute_shader_from_file("./resources/shaders/sort/init_sort_args.hlsl", "CSMain", nullptr, nullptr);
 
     D3D11_BUFFER_DESC desc;
     ZeroMemory(&desc, sizeof(desc));

@@ -6,8 +6,6 @@
 #include <SimpleMath.h>
 using namespace DirectX::SimpleMath;
 
-#include "light.h"
-
 #include "render/resource/buffer.h"
 #include "render/resource/shader.h"
 
@@ -24,7 +22,7 @@ public:
 
     void add_model(class Model* model);
 
-    void add_light(Light* light);
+    void add_light(class Light* light);
 
     void add_particle_system(class ParticleSystem* particle_system);
 
@@ -32,7 +30,7 @@ public:
     void draw();
 private:
     std::vector<class Model*> models_;
-    std::vector<Light*> lights_;
+    std::vector<class Light*> lights_;
     std::vector<class ParticleSystem*> particle_systems_;
 
     ConstBuffer uniform_buffer_;
@@ -47,13 +45,13 @@ private:
     } uniform_data_;
 
     // opaque pass
-    Shader opaque_pass_shader_;
+    GraphicsShader opaque_pass_shader_;
     ID3D11RasterizerState* opaque_rasterizer_state_{ nullptr };
 
     ID3D11DepthStencilState* light_depth_state_{ nullptr };
 
     // assemble
-    Shader present_shader_;
+    GraphicsShader present_shader_;
     ID3D11SamplerState* texture_sampler_state_{ nullptr };
     ID3D11RasterizerState* assemble_rasterizer_state_{ nullptr };
 

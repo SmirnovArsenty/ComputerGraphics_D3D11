@@ -12,6 +12,7 @@ using namespace DirectX::SimpleMath;
 
 class GameComponent;
 class Camera;
+class ShaderCache;
 
 class Render
 {
@@ -39,6 +40,8 @@ private:
 
     Camera* camera_{ nullptr };
 
+    ShaderCache* shader_cache_{ nullptr };
+
     ID3DUserDefinedAnnotation* user_defined_annotation_{ nullptr };
 
 public:
@@ -64,6 +67,8 @@ public:
     ID3D11DeviceContext* context() const;
 
     Camera* camera() const;
+
+    ShaderCache* shader_cache() const;
 
     ID3DUserDefinedAnnotation* user_defined_annotation() const;
 };

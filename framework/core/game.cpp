@@ -140,13 +140,14 @@ void Game::run()
 
 void Game::destroy()
 {
+    scene_->destroy();
+
     for (auto game_component : game_components_)
     {
         game_component->destroy_resources();
     }
     game_components_.clear();
 
-    scene_->destroy();
     render_->destroy_resources();
     win_->destroy();
 }

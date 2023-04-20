@@ -1,21 +1,16 @@
 #include "core/game.h"
 #include "render/render.h"
-
+#include "render/resource/shader_cache.h"
 #include "render/scene/light.h"
-
-std::unique_ptr<Shader> AmbientLight::shader_{ nullptr };
 
 AmbientLight::AmbientLight(Vector3 color) : color_{ color }
 {
-    if (shader_.get() == nullptr) {
-        // initialize shader_
-        shader_ = std::make_unique<Shader>();
-        shader_->set_vs_shader_from_file("./resources/shaders/deferred/light_pass/ambient.hlsl", "VSMain", nullptr, nullptr);
-        shader_->set_ps_shader_from_file("./resources/shaders/deferred/light_pass/ambient.hlsl", "PSMain", nullptr, nullptr);
+    shader_ = Game::inst()->render().shader_cache()->add_shader(
+        "./resources/shaders/deferred/light_pass/ambient.hlsl",
+        ShaderCache::ShaderFlags(ShaderCache::ShaderFlags::S_VERTEX | ShaderCache::ShaderFlags::S_PIXEL));
 #ifndef NDEBUG
-        shader_->set_name("ambient");
+    shader_->set_name("ambient");
 #endif
-    }
 }
 
 void AmbientLight::initialize()

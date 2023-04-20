@@ -22,10 +22,10 @@ private:
 
     ID3D11Buffer* dispatch_info_{ nullptr }; // constant buffer containing dispatch specific information
 
-    Shader sort_step_;
-    Shader sort512_;
-    Shader sort_inner512_;
-    Shader init_args_;
+    ComputeShader sort_step_;
+    ComputeShader sort512_;
+    ComputeShader sort_inner512_;
+    ComputeShader init_args_;
 
     ID3D11Buffer* indirect_args_{ nullptr };
     ID3D11UnorderedAccessView* indirect_args_UAV_{ nullptr };

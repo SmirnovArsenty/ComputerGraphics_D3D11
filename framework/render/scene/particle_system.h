@@ -35,36 +35,45 @@ private:
         Matrix view_proj;
         Matrix view_proj_inv;
 
-        Vector4 camera_position;
-        Vector4 camera_direction;
+        Vector3 camera_position;
+        float screen_width;
+
+        Vector3 camera_direction;
+        float screen_height;
 
         float global_time;
-
+        float frame_delta;
+        Vector2 PerFrameConstBuffer_dummy;
     } uniform_data_;
     ConstBuffer uniform_buffer_;
 
     struct Particle
     {
         Vector3 position;
-        Vector3 prev_position;
+        float distance_to_camera_sqr;
+
         Vector3 velocity;
+        float mass;
         Vector3 acceleration;
+        float mass_delta;
 
-        float size;
-        float sizeDelta;
-        float weigth;
-        float weight_delta;
+        Vector4 start_color;
+        Vector4 end_color;
+        Vector4 color;
 
-        float energy;
-        Vector3 color;
-
-        Vector3 color_delta;
-        float dummy;
+        float age;
+        float life_span;
+        float start_size;
+        float end_size;
     };
 
     ID3D11Buffer* particle_pool_{ nullptr }; // all particles
     ID3D11ShaderResourceView* particle_pool_SRV_{ nullptr };
     ID3D11UnorderedAccessView* particle_pool_UAV_{ nullptr };
+
+    ID3D11Buffer* view_space_particle_positions_{ nullptr }; // cached particle positions in view space
+    ID3D11ShaderResourceView* view_space_particle_positions_SRV_{ nullptr };
+    ID3D11UnorderedAccessView* view_space_particle_positions_UAV_{ nullptr };
 
     ID3D11Buffer* dead_list_{ nullptr }; // dead particles indices
     ID3D11UnorderedAccessView* dead_list_UAV_{ nullptr };
@@ -73,29 +82,18 @@ private:
     ID3D11ShaderResourceView* sort_list_SRV_{ nullptr };
     ID3D11UnorderedAccessView* sort_list_UAV_{ nullptr };
 
+    ID3D11Buffer* index_buffer_{ nullptr };
+
     ID3D11Buffer* indirect_args_{ nullptr }; // args for indirect draw
     ID3D11UnorderedAccessView* indirect_args_UAV_{ nullptr };
 
     ID3D11Buffer* dead_list_const_buffer_{ nullptr };
     ID3D11Buffer* sort_list_const_buffer_{ nullptr };
 
-    ID3D11BlendState* blend_state_{ nullptr };
-
-    // compute shaders
-    Shader init_dead_list_;
-    Shader emit_;
-    Shader simulate_;
-    Shader reset_;
-
-    Shader render_;
-    Shader blit_;
-
-    SortLib sort_lib_;
-
     struct EmitterParams
     {
         Vector3 origin;
-        uint32_t num_to_emit;
+        uint32_t random;
 
         Vector3 velocity;
         uint32_t particle_life_span;
@@ -103,11 +101,29 @@ private:
         float start_size;
         float end_size;
         float mass;
-        float velocity_variance;
-    };
+        uint32_t max_particles_this_frame;
+
+        Vector4 start_color;
+        Vector4 end_color;
+    } emitter_data_;
+    ID3D11Buffer* emitter_const_buffer_{ nullptr };
+
+    ID3D11BlendState* blend_state_{ nullptr };
+
+    ID3D11RasterizerState* rasterizer_state_{ nullptr };
+
+    // compute shaders
+    ComputeShader init_dead_list_;
+    ComputeShader emit_;
+    ComputeShader simulate_;
+    ComputeShader reset_;
+
+    GraphicsShader render_;
+
+    SortLib sort_lib_;
 
     void init_dead_list();
-    void emit(const EmitterParams& emitter_params);
+    void emit();
     void simulate();
     void sort();
 

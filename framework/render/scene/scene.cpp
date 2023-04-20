@@ -7,6 +7,7 @@
 
 #include "scene.h"
 #include "model.h"
+#include "light.h"
 #include "particle_system.h"
 
 Scene::Scene() : uniform_data_{}
@@ -206,6 +207,12 @@ void Scene::destroy()
         SAFE_RELEASE(deferred_gbuffers_[i]);
     }
     opaque_pass_shader_.destroy();
+    SAFE_RELEASE(light_depth_state_);
+    present_shader_.destroy();
+    SAFE_RELEASE(light_blend_state_);
+    SAFE_RELEASE(light_buffer_view_);
+    SAFE_RELEASE(light_buffer_target_view_);
+    SAFE_RELEASE(light_buffer_);
 }
 
 void Scene::add_model(Model* model)
@@ -287,14 +294,24 @@ void Scene::draw()
         }
     }
 
+    context->OMSetRenderTargets(1, &light_buffer_target_view_, deferred_depth_target_view_);
+    float clear_color[4] = { 0.f, 0.f, 0.f, 1.f };
+    context->ClearRenderTargetView(light_buffer_target_view_, clear_color);
+
+    // particles
+    {
+        Annotation annotation("Particles");
+        context->OMSetRenderTargets(1, &light_buffer_target_view_, nullptr);
+        for (auto& p : particle_systems_) {
+            p->draw();
+        }
+    }
+
     // lights pass
     {
         Annotation annotation("Light pass");
         context->OMSetBlendState(light_blend_state_, nullptr, 0xFFFFFFFF);
-        context->OMSetRenderTargets(1, &light_buffer_target_view_, deferred_depth_target_view_);
         context->OMSetDepthStencilState(light_depth_state_, 0);
-        float clear_color[4] = { 0.f, 0.f, 0.f, 1.f };
-        context->ClearRenderTargetView(light_buffer_target_view_, clear_color);
         context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         context->RSSetState(assemble_rasterizer_state_);
         context->PSSetShaderResources(0, gbuffer_count_, deferred_gbuffers_view_);
@@ -304,14 +321,6 @@ void Scene::draw()
 
         for (auto& l : lights_) {
             l->draw();
-        }
-    }
-
-    // particles
-    {
-        Annotation annotation("Particles");
-        for (auto& p : particle_systems_) {
-            p->draw();
         }
     }
 

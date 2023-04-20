@@ -43,8 +43,7 @@ float4 PSMain(PS_IN input) : SV_Target
     //return float4(1.0f, 1.0f, 1.0f, 1.0f);
     int3 sample_index = int3(input.position.xy, 0);
 
-    float3 result;
-
+    float4 result;
 
     float4 position = position_tex.Load(sample_index);
     float3 to_l = (light_position_radius.xyz - position.xyz);
@@ -53,7 +52,6 @@ float4 PSMain(PS_IN input) : SV_Target
     if (distance > light_position_radius.w)
         discard;
 
-    
     float radius = light_position_radius.w;
     float a = 1 - distance / radius;
 

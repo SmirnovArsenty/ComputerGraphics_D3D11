@@ -1,33 +1,29 @@
 #include "core/game.h"
 #include "render/render.h"
 #include "render/d3d11_common.h"
-
+#include "render/resource/shader_cache.h"
 #include "render/scene/light.h"
-
-std::unique_ptr<Shader> PointLight::shader_{ nullptr };
 
 PointLight::PointLight(const Vector3& color, const Vector3& position, float radius) :
     color_{ color }, position_{ position }, radius_{ radius }
 {
-    if (shader_.get() == nullptr) {
-        // initialize shader_
-        shader_ = std::make_unique<Shader>();
-        std::string cascade_count_str = std::to_string(Light::shadow_cascade_count);
-        D3D_SHADER_MACRO macro[] = {
-            "CASCADE_COUNT", cascade_count_str.c_str(),
-            nullptr, nullptr
-        };
-        shader_->set_vs_shader_from_file("./resources/shaders/deferred/light_pass/point.hlsl", "VSMain", macro, nullptr);
-        shader_->set_ps_shader_from_file("./resources/shaders/deferred/light_pass/point.hlsl", "PSMain", macro, nullptr);
-        D3D11_INPUT_ELEMENT_DESC inputs[] =
-        {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        };
-        shader_->set_input_layout(inputs, std::size(inputs));
+    std::string cascade_count_str = std::to_string(Light::shadow_cascade_count);
+    D3D_SHADER_MACRO macro[] = {
+        "CASCADE_COUNT", cascade_count_str.c_str(),
+        nullptr, nullptr
+    };
+    shader_ = Game::inst()->render().shader_cache()->add_shader(
+        "./resources/shaders/deferred/light_pass/point.hlsl",
+        ShaderCache::ShaderFlags(ShaderCache::ShaderFlags::S_VERTEX | ShaderCache::ShaderFlags::S_PIXEL),
+        macro);
+    D3D11_INPUT_ELEMENT_DESC inputs[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+    static_cast<GraphicsShader*>(shader_)->set_input_layout(inputs, std::size(inputs));
 #ifndef NDEBUG
-        shader_->set_name("point");
+    shader_->set_name("point");
 #endif
-    }
 }
 
 void PointLight::initialize()
