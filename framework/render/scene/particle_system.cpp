@@ -141,7 +141,7 @@ void ParticleSystem::initialize()
     blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
     blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
     blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
-    blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+    blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
     blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
     D3D11_CHECK(device->CreateBlendState(&blend_desc, &blend_state_));
 
@@ -194,13 +194,13 @@ void ParticleSystem::draw()
 
     emitter_data_.origin = Vector3(0, 0, 0);
     emitter_data_.velocity = Vector3(0, 1, 0);
-    emitter_data_.particle_life_span = 100;
-    emitter_data_.start_size = 0.5;
-    emitter_data_.end_size = 0.1;
+    emitter_data_.particle_life_span = 2;
+    emitter_data_.start_size = 0.5f;
+    emitter_data_.end_size = 0.1f;
     emitter_data_.mass = 1;
     emitter_data_.start_color = Vector4(1.0f, 0.2f, 0.2f, 1.f);
     emitter_data_.end_color = Vector4(0.0f, 0.0f, 0.0f, 0.f);
-    emitter_data_.max_particles_this_frame = 100;
+    emitter_data_.max_particles_this_frame = 1;
     emit();
 
     simulate();

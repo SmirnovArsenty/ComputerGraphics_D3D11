@@ -51,15 +51,12 @@ PS_INPUT VSMain( uint VertexId : SV_VertexID )
         float2(  1, -1 ),
     };
 
-    //uint index = (uint)sorted_index_buffer[ active_particles - particleIndex - 1 ].y;
-    uint index = (uint)sorted_index_buffer[ particleIndex ].y;
-    Particle p = particle_pool[ index ];
-
-    // float4 ViewSpaceCentreAndRadius = view_space_positions[index];
-    // float3 VelocityXYEmitterNdotL = float3( p.m_VelocityXY.x, p.m_VelocityXY.y, p.m_EmitterNdotL );
+    uint index = (uint)sorted_index_buffer[ active_particles - particleIndex - 1 ].y;
+    // uint index = (uint)sorted_index_buffer[particleIndex].y;
+    Particle p = particle_pool[index];
 
     float2 offset = offsets[cornerIndex];
-    float2 uv = (offset + 1) * float2(0.25, 0.5);
+    float2 uv = (offset + 1) * float2(0.5, 0.5);
 
     // float radius = ViewSpaceCentreAndRadius.w;
     // float3 cameraFacingPos;
@@ -78,7 +75,7 @@ PS_INPUT VSMain( uint VertexId : SV_VertexID )
     // Output.Position = mul(float4(cameraFacingPos, 1), proj);
     Output.ViewSpaceCentreAndRadius.xyz = mul(view, float4(p.position, 1)).xyz; // ViewSpaceCentreAndRadius;
     Output.ViewSpaceCentreAndRadius.w = ((p.age / p.life_span) * (p.start_size - p.end_size) + p.start_size);
-    Output.ViewPos = Output.ViewSpaceCentreAndRadius.xyz + float3(uv * Output.ViewSpaceCentreAndRadius.w, 0.f);
+    Output.ViewPos = Output.ViewSpaceCentreAndRadius.xyz + float3((uv * 2 - 1) * Output.ViewSpaceCentreAndRadius.w, 0.f);
     Output.Position = mul(proj, float4(Output.ViewPos, 1.f));
 
     Output.TexCoord = uv;
@@ -147,8 +144,14 @@ float4 PSMain(PS_INPUT In) : SV_TARGET
         uv = (In.ViewPos.xy - In.ViewSpaceCentreAndRadius.xy ) / particleRadius;
     }
 
+    if (dot(uv, uv) > 1)
+    {
+        color = (0).xxxx;
+    }
+
     // Scale and bias
     uv = (1 + uv) * 0.5;
+
 
     float pi = 3.1415926535897932384626433832795;
 
@@ -167,8 +170,8 @@ float4 PSMain(PS_INPUT In) : SV_TARGET
     // ndotl = lerp( ndotl, emitterNdotL, 0.5 );
 
     // Ambient lighting plus directional lighting
-    float3 lighting = (ndotl * 0.3f).xxx; //g_AmbientColor + ndotl * g_SunColor;
-
+    // float3 lighting = (ndotl * 0.3f).xxx; //g_AmbientColor + ndotl * g_SunColor;
+    float3 lighting = (1).xxx; 
     // Multiply lighting term in
     color.rgb *= lighting;
 
