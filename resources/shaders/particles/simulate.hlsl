@@ -18,7 +18,7 @@ RWStructuredBuffer<float2> sort_list : register(u2);
 RWBuffer<uint> draw_args : register(u4);
 
 // The opaque scene's depth buffer read as a texture
-// Texture2D depth_buffer : register(t0);
+Texture2D depth_buffer : register(t0);
 
 
 // Calculate the view space position given a point in screen space and a texel offset
@@ -115,6 +115,13 @@ void CSMain( uint3 id : SV_DispatchThreadID )
 
         // Write the new position
         p.position = vNewPosition;
+
+        // calc reflect
+        float4 view_proj_pos = mul(view_proj, vNewPosition);
+        float depth = depth_buffer.Load(uint3(view_proj_pos.xy, 0)).x;
+        if (view_proj_pos.z > depth) {
+            p.velocity = -p.velocity * 0.7 + float3(sin(global_time * id.x), sin(global_time * id.x + 8), sin(global_time * id.x + 4));
+        }
 
         // Calculate the the distance to the eye for sorting in the rasterization path
         float3 vec = vNewPosition - camera_position.xyz;

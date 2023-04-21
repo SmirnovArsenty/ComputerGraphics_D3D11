@@ -294,7 +294,7 @@ void Scene::draw()
         }
     }
 
-    context->OMSetRenderTargets(1, &light_buffer_target_view_, deferred_depth_target_view_);
+    context->OMSetRenderTargets(1, &light_buffer_target_view_, nullptr);
     float clear_color[4] = { 0.f, 0.f, 0.f, 1.f };
     context->ClearRenderTargetView(light_buffer_target_view_, clear_color);
 
@@ -303,9 +303,12 @@ void Scene::draw()
         Annotation annotation("Particles");
         context->OMSetRenderTargets(1, &light_buffer_target_view_, nullptr);
         for (auto& p : particle_systems_) {
+            p->set_depth_shader_resource_view(deferred_depth_view_);
             p->draw();
         }
     }
+
+    context->OMSetRenderTargets(1, &light_buffer_target_view_, deferred_depth_target_view_);
 
     // lights pass
     {

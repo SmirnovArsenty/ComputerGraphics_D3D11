@@ -171,7 +171,7 @@ void ParticleSystem::initialize()
 
     reset_flag_ = true;
 
-    emitter_data_.origin = Vector3(0, 0, 0);
+    // emitter_data_.origin = Vector3(0, 0, 0);
     emitter_data_.velocity = Vector3(0, 0, 0);
     emitter_data_.particle_life_span = 30;
     emitter_data_.start_size = 0.3f;
@@ -288,15 +288,9 @@ void ParticleSystem::imgui()
         ImGui::SameLine();
         ImGui::SliderInt("#", &emitter_data_.max_particles_this_frame, 1, max_particles_count_);
 
-        ImGui::BeginGroup();
         ImGui::Text("Particle velocity");
         ImGui::SameLine();
-        ImGui::SliderFloat3("####", &emitter_data_.velocity.x, -1.f, 1.f);
-        //ImGui::SameLine();
-        //ImGui::SliderFloat("#####", &emitter_data_.velocity.y, -1.f, 1.f);
-        //ImGui::SameLine();
-        //ImGui::SliderFloat("######", &emitter_data_.velocity.z, -1.f, 1.f);
-        ImGui::EndGroup();
+        ImGui::SliderFloat3("####", &emitter_data_.velocity.x, -10.f, 10.f);
 
         ImGui::Text("particle lifespan");
         ImGui::SameLine();
@@ -370,6 +364,11 @@ void ParticleSystem::destroy_resources()
     sort_lib_.release();
 }
 
+void ParticleSystem::set_depth_shader_resource_view(ID3D11ShaderResourceView* depth_view)
+{
+    depth_view_ = depth_view;
+}
+
 void ParticleSystem::init_dead_list()
 {
     Annotation annotation("Init dead list");
@@ -420,14 +419,14 @@ void ParticleSystem::simulate()
     UINT initialCounts[] = { (UINT)-1, (UINT)-1, (UINT)0, (UINT)-1, (UINT)-1, (UINT)-1 };
     context->CSSetUnorderedAccessViews(0, ARRAYSIZE(uavs), uavs, initialCounts);
 
-    // ID3D11ShaderResourceView* srvs[] = { depth_SRV };
-    // context->CSSetShaderResources(0, ARRAYSIZE(srvs), srvs);
+    ID3D11ShaderResourceView* srvs[] = { depth_view_ };
+    context->CSSetShaderResources(0, ARRAYSIZE(srvs), srvs);
 
     simulate_.use();
     context->Dispatch(align(max_particles_count_, 256) / 256, 1, 1);
 
-    // ZeroMemory(srvs, sizeof(srvs));
-    // context->CSSetShaderResources(0, ARRAYSIZE(srvs), srvs);
+    ZeroMemory(srvs, sizeof(srvs));
+    context->CSSetShaderResources(0, ARRAYSIZE(srvs), srvs);
 
     ZeroMemory(uavs, sizeof(uavs));
     context->CSSetUnorderedAccessViews(0, ARRAYSIZE(uavs), uavs, nullptr);
