@@ -144,24 +144,25 @@ float4 PSMain(PS_INPUT In) : SV_TARGET
         uv = (In.ViewPos.xy - In.ViewSpaceCentreAndRadius.xy ) / particleRadius;
     }
 
+    // circle particles
     if (dot(uv, uv) > 1)
     {
         color = (0).xxxx;
+        discard;
     }
 
     // Scale and bias
     uv = (1 + uv) * 0.5;
-
 
     float pi = 3.1415926535897932384626433832795;
 
     n.x = -cos( pi * uv.x );
     n.y = -cos( pi * uv.y );
     n.z = sin( pi * length( uv ) );
-    n = normalize( n );
+    n = normalize(n);
 
-    float3 sun_direction = normalize(float3(1, -1, 1));
-    float ndotl = saturate(dot(-sun_direction, n));
+    // float3 sun_direction = normalize(float3(1, -1, 1));
+    float ndotl = 1.f;//saturate(dot(-sun_direction, n));
 
     // Fetch the emitter's lighting term
     // float emitterNdotL = In.VelocityXYEmitterNdotL.z;
@@ -170,10 +171,10 @@ float4 PSMain(PS_INPUT In) : SV_TARGET
     // ndotl = lerp( ndotl, emitterNdotL, 0.5 );
 
     // Ambient lighting plus directional lighting
-    // float3 lighting = (ndotl * 0.3f).xxx; //g_AmbientColor + ndotl * g_SunColor;
-    float3 lighting = (1).xxx; 
+    float3 lighting = (ndotl).xxx; //g_AmbientColor + ndotl * g_SunColor;
     // Multiply lighting term in
     color.rgb *= lighting;
 
-    return color;
+    //return color;
+    return float4(color.rgb, 1.f);
 }

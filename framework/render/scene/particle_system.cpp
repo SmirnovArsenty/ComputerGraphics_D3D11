@@ -1,10 +1,12 @@
-#include "particle_system.h"
+#include <imgui/imgui.h>
 
 #include "win32/win.h"
 #include "render/render.h"
 #include "render/camera.h"
 #include "render/d3d11_common.h"
 #include "render/annotation.h"
+
+#include "particle_system.h"
 
 ParticleSystem::ParticleSystem(uint32_t max_particles, Vector3 origin)
     : max_particles_count_{ max_particles }
@@ -117,6 +119,13 @@ void ParticleSystem::initialize()
     delete[] data.pSysMem;
 
     ZeroMemory(&buffer_desc, sizeof(buffer_desc));
+    buffer_desc.Usage = D3D11_USAGE_STAGING;
+    buffer_desc.BindFlags = 0;
+    buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    buffer_desc.ByteWidth = sizeof(UINT);
+    D3D11_CHECK(device->CreateBuffer(&buffer_desc, nullptr, &debug_counter_buffer_));
+
+    ZeroMemory(&buffer_desc, sizeof(buffer_desc));
     buffer_desc.Usage = D3D11_USAGE_DEFAULT;
     buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     buffer_desc.CPUAccessFlags = 0;
@@ -137,8 +146,8 @@ void ParticleSystem::initialize()
     blend_desc.IndependentBlendEnable = false;
     blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
     blend_desc.RenderTarget[0].BlendEnable = true;
-    blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
-    blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;//SRC_ALPHA;
+    blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;//INV_SRC_ALPHA;
     blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
     blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
     blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
@@ -161,6 +170,16 @@ void ParticleSystem::initialize()
     sort_lib_.init();
 
     reset_flag_ = true;
+
+    emitter_data_.origin = Vector3(0, 0, 0);
+    emitter_data_.velocity = Vector3(0, 0, 0);
+    emitter_data_.particle_life_span = 30;
+    emitter_data_.start_size = 0.3f;
+    emitter_data_.end_size = 0.01f;
+    emitter_data_.mass = 1.f;
+    emitter_data_.start_color = Vector4(1.0f, 0.2f, 0.2f, 1.f);
+    emitter_data_.end_color = Vector4(0.0f, 0.0f, 0.0f, 0.f);
+    emitter_data_.max_particles_this_frame = 100;
 }
 
 void ParticleSystem::draw()
@@ -192,20 +211,15 @@ void ParticleSystem::draw()
         reset_flag_ = false;
     }
 
-    emitter_data_.origin = Vector3(0, 0, 0);
-    emitter_data_.velocity = Vector3(0, 1, 0);
-    emitter_data_.particle_life_span = 2;
-    emitter_data_.start_size = 0.5f;
-    emitter_data_.end_size = 0.1f;
-    emitter_data_.mass = 1;
-    emitter_data_.start_color = Vector4(1.0f, 0.2f, 0.2f, 1.f);
-    emitter_data_.end_color = Vector4(0.0f, 0.0f, 0.0f, 0.f);
-    emitter_data_.max_particles_this_frame = 1;
     emit();
 
     simulate();
 
     context->CopyStructureCount(sort_list_const_buffer_, 0, sort_list_UAV_);
+
+    dead_particles_after_simulation_ = read_counter(dead_list_UAV_);
+    sort_particles_after_simulation_ = read_counter(sort_list_UAV_);
+    assert(sort_particles_after_simulation_ <= dead_particles_on_init_);
 
     sort();
 
@@ -235,6 +249,64 @@ void ParticleSystem::draw()
     context->VSSetShaderResources(0, ARRAYSIZE(vs_srv), vs_srv);
     // ZeroMemory(ps_srv, sizeof(ps_srv));
     // context->PSSetShaderResources(1, ARRAYSIZE(ps_srv), ps_srv);
+}
+
+void ParticleSystem::imgui()
+{
+    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+
+    uint32_t window_flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse;
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(400, 100), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Particle system info", nullptr, window_flags);
+    {
+        ImGui::Text("dead count on init");
+        ImGui::SameLine();
+        ImGui::Text("%d", dead_particles_on_init_);
+
+        ImGui::Text("dead count after emit");
+        ImGui::SameLine();
+        ImGui::Text("%d", dead_particles_after_emit_);
+
+        ImGui::Text("dead count after simulation");
+        ImGui::SameLine();
+        ImGui::Text("%d", dead_particles_after_simulation_);
+
+        ImGui::Text("sort count after simulation");
+        ImGui::SameLine();
+        ImGui::Text("%d", sort_particles_after_simulation_);
+    }
+    ImGui::End();
+
+    ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkSize.x - 400, 0), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(400, 120), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Emitter info", nullptr, window_flags);
+    {
+        ImGui::Text("particles to emit per frame");
+        ImGui::SameLine();
+        ImGui::SliderInt("#", &emitter_data_.max_particles_this_frame, 1, max_particles_count_);
+
+        ImGui::BeginGroup();
+        ImGui::Text("Particle velocity");
+        ImGui::SameLine();
+        ImGui::SliderFloat3("####", &emitter_data_.velocity.x, -1.f, 1.f);
+        //ImGui::SameLine();
+        //ImGui::SliderFloat("#####", &emitter_data_.velocity.y, -1.f, 1.f);
+        //ImGui::SameLine();
+        //ImGui::SliderFloat("######", &emitter_data_.velocity.z, -1.f, 1.f);
+        ImGui::EndGroup();
+
+        ImGui::Text("particle lifespan");
+        ImGui::SameLine();
+        ImGui::SliderFloat("sec", &emitter_data_.particle_life_span, 0, 60);
+
+        ImGui::Text("particle mass");
+        ImGui::SameLine();
+        ImGui::SliderFloat("kg", &emitter_data_.mass, -100, 100);
+    }
+    ImGui::End();
 }
 
 void ParticleSystem::update()
@@ -281,6 +353,7 @@ void ParticleSystem::destroy_resources()
     SAFE_RELEASE(indirect_args_UAV_);
     SAFE_RELEASE(indirect_args_);
 
+    SAFE_RELEASE(debug_counter_buffer_);
     SAFE_RELEASE(dead_list_const_buffer_);
     SAFE_RELEASE(sort_list_const_buffer_);
     SAFE_RELEASE(emitter_const_buffer_);
@@ -307,6 +380,8 @@ void ParticleSystem::init_dead_list()
     context->CSSetUnorderedAccessViews(0, 1, &dead_list_UAV_, &initial_count);
 
     context->Dispatch(align(max_particles_count_, 256) / 256, 1, 1);
+
+    dead_particles_on_init_ = read_counter(dead_list_UAV_);
 }
 
 void ParticleSystem::emit()
@@ -330,6 +405,8 @@ void ParticleSystem::emit()
     context->CopyStructureCount(dead_list_const_buffer_, 0, dead_list_UAV_);
 
     context->Dispatch(align(emitter_data_.max_particles_this_frame, 1024) / 1024, 1, 1);
+
+    dead_particles_after_emit_ = read_counter(dead_list_UAV_);
 }
 
 void ParticleSystem::simulate()
@@ -340,7 +417,7 @@ void ParticleSystem::simulate()
     uniform_buffer_.bind(0);
 
     ID3D11UnorderedAccessView* uavs[] = { particle_pool_UAV_, dead_list_UAV_, sort_list_UAV_, view_space_particle_positions_UAV_, indirect_args_UAV_ };
-    UINT initialCounts[] = { (UINT)-1, (UINT)-1, (UINT)-1, (UINT)-1, (UINT)-1, (UINT)-1 };
+    UINT initialCounts[] = { (UINT)-1, (UINT)-1, (UINT)0, (UINT)-1, (UINT)-1, (UINT)-1 };
     context->CSSetUnorderedAccessViews(0, ARRAYSIZE(uavs), uavs, initialCounts);
 
     // ID3D11ShaderResourceView* srvs[] = { depth_SRV };
@@ -362,4 +439,24 @@ void ParticleSystem::sort()
     auto context = Game::inst()->render().context();
 
     sort_lib_.run(max_particles_count_, sort_list_UAV_, sort_list_const_buffer_);
+}
+
+int ParticleSystem::read_counter(ID3D11UnorderedAccessView* uav)
+{
+    auto context = Game::inst()->render().context();
+    int count = 0;
+
+    // Copy the UAV counter to a staging resource
+    context->CopyStructureCount(debug_counter_buffer_, 0, uav);
+
+    // Map the staging resource
+    D3D11_MAPPED_SUBRESOURCE mss;
+    context->Map(debug_counter_buffer_, 0, D3D11_MAP_READ, 0, &mss);
+
+    // Read the data
+    count = *(int*)mss.pData;
+
+    context->Unmap(debug_counter_buffer_, 0);
+
+    return count;
 }

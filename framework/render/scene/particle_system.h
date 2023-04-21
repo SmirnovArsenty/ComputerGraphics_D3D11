@@ -96,12 +96,12 @@ private:
         uint32_t random;
 
         Vector3 velocity;
-        uint32_t particle_life_span;
+        float particle_life_span;
 
         float start_size;
         float end_size;
         float mass;
-        uint32_t max_particles_this_frame;
+        int32_t max_particles_this_frame;
 
         Vector4 start_color;
         Vector4 end_color;
@@ -127,13 +127,22 @@ private:
     void simulate();
     void sort();
 
+    //debug
+    ID3D11Buffer* debug_counter_buffer_{ nullptr };
+    int read_counter(ID3D11UnorderedAccessView* uav);
+
+    uint32_t dead_particles_on_init_{ 0 };
+    uint32_t dead_particles_after_emit_{ 0 };
+    uint32_t dead_particles_after_simulation_{ 0 };
+    uint32_t sort_particles_after_simulation_{ 0 };
+
 public:
     ParticleSystem(uint32_t max_particles, Vector3 origin);
     ~ParticleSystem();
 
     void initialize() override;
     void draw() override;
-    void imgui() override {};
+    void imgui() override;
     void reload() override {};
     void update() override;
     void destroy_resources() override;

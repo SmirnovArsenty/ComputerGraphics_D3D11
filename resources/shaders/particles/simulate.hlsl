@@ -129,6 +129,7 @@ void CSMain( uint3 id : SV_DispatchThreadID )
         float4 color1 = p.end_color;
 
         p.color = lerp(color0, color1, saturate(5 * fScaledLife));
+        p.color.a = lerp( 1, 0, saturate(fScaledLife - 0.8) / 0.2 );
 
         //if (g_ShowSleepingParticles && p.m_IsSleeping == 1)
         //{

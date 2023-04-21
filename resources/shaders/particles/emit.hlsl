@@ -12,7 +12,7 @@ cbuffer EmitterConstantBuffer : register(b1)
     uint random;
 
     float3 velocity;
-    uint particle_life_span;
+    float particle_life_span;
 
     float start_size;
     float end_size;
@@ -40,9 +40,11 @@ void CSMain( uint3 id : SV_DispatchThreadID )
         p.distance_to_camera_sqr = -1;
         p.mass = mass;
         p.mass_delta = 0.f;
-        p.velocity = velocity.xyz;
-        p.acceleration = (0).xxx;
-        p.age = particle_life_span;
+        p.velocity = velocity.xyz +
+            float3(sin(global_time * id.x), sin(global_time * 0.5 * id.x), sin(global_time * 2.0 * id.x)) +
+            abs(0.3 * float3(sin(global_time * 4 + id.x), sin(global_time * 5 + id.x), sin(global_time * 4.8 + id.x)));
+        p.acceleration = float3(0, 9.81, 0) + 0.5 * normalize(-p.velocity);//float3(sin(global_time * id.x * 0.35 + 34), sin(global_time * id.x * 0.67 + 23), sin(global_time * id.x * 0.57 + 83)).xxx;
+        p.age = particle_life_span + sin(id.x * global_time * 0.86);
         p.life_span = particle_life_span;
         p.start_color = start_color;
         p.end_color = end_color;
