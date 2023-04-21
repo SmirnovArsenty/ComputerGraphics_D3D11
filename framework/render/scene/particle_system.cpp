@@ -364,9 +364,10 @@ void ParticleSystem::destroy_resources()
     sort_lib_.release();
 }
 
-void ParticleSystem::set_depth_shader_resource_view(ID3D11ShaderResourceView* depth_view)
+void ParticleSystem::set_depth_shader_resource_view(ID3D11ShaderResourceView* depth_view, ID3D11ShaderResourceView* normal_view)
 {
     depth_view_ = depth_view;
+    normal_view_ = normal_view;
 }
 
 void ParticleSystem::init_dead_list()
@@ -419,7 +420,7 @@ void ParticleSystem::simulate()
     UINT initialCounts[] = { (UINT)-1, (UINT)-1, (UINT)0, (UINT)-1, (UINT)-1, (UINT)-1 };
     context->CSSetUnorderedAccessViews(0, ARRAYSIZE(uavs), uavs, initialCounts);
 
-    ID3D11ShaderResourceView* srvs[] = { depth_view_ };
+    ID3D11ShaderResourceView* srvs[] = { depth_view_, normal_view_ };
     context->CSSetShaderResources(0, ARRAYSIZE(srvs), srvs);
 
     simulate_.use();

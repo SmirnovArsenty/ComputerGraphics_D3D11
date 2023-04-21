@@ -136,8 +136,9 @@ private:
     uint32_t dead_particles_after_simulation_{ 0 };
     uint32_t sort_particles_after_simulation_{ 0 };
 
-    // external depth
+    // external textures
     ID3D11ShaderResourceView* depth_view_{ nullptr };
+    ID3D11ShaderResourceView* normal_view_{ nullptr };
 
 public:
     ParticleSystem(uint32_t max_particles, Vector3 origin);
@@ -150,5 +151,5 @@ public:
     void update() override;
     void destroy_resources() override;
 
-    void set_depth_shader_resource_view(ID3D11ShaderResourceView* depth_view);
+    void set_depth_shader_resource_view(ID3D11ShaderResourceView* depth_view, ID3D11ShaderResourceView* normal);
 };

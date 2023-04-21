@@ -20,6 +20,8 @@ RWBuffer<uint> draw_args : register(u4);
 // The opaque scene's depth buffer read as a texture
 Texture2D depth_buffer : register(t0);
 
+Texture2D<float3> normal_buffer : register(t1);
+
 
 // Calculate the view space position given a point in screen space and a texel offset
 // float3 calcViewSpacePositionFromDepth( float2 normalizedScreenPosition, int2 texelOffset )
@@ -117,10 +119,16 @@ void CSMain( uint3 id : SV_DispatchThreadID )
         p.position = vNewPosition;
 
         // calc reflect
-        float4 view_proj_pos = mul(view_proj, vNewPosition);
-        float depth = depth_buffer.Load(uint3(view_proj_pos.xy, 0)).x;
-        if (view_proj_pos.z > depth) {
-            p.velocity = -p.velocity * 0.7 + float3(sin(global_time * id.x), sin(global_time * id.x + 8), sin(global_time * id.x + 4));
+        float4 view_proj_pos = mul(view_proj, float4(vNewPosition, 1.f));
+        view_proj_pos = view_proj_pos / view_proj_pos.w;
+        float2 depth_uv = float2((view_proj_pos.x * 0.5 + 0.5), (-view_proj_pos.y * 0.5 + 0.5));
+        if (depth_uv.x < 1 && depth_uv.x > 0 && depth_uv.y > 0 && depth_uv.y < 1) {
+            float depth = depth_buffer.Load(uint3(depth_uv.x * screen_width, depth_uv.y * screen_height, 0)).x;
+            float3 normal = normal_buffer.Load(uint3(depth_uv.x * screen_width, depth_uv.y * screen_height, 0));
+            if (view_proj_pos.z > depth) {
+                p.velocity = reflect(p.velocity, normal);
+                p.velocity = p.velocity * 0.7 + float3(sin(global_time * id.x), sin(global_time * id.x + 8), sin(global_time * id.x + 4));
+            }
         }
 
         // Calculate the the distance to the eye for sorting in the rasterization path

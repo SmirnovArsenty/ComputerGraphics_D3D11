@@ -303,7 +303,7 @@ void Scene::draw()
         Annotation annotation("Particles");
         context->OMSetRenderTargets(1, &light_buffer_target_view_, nullptr);
         for (auto& p : particle_systems_) {
-            p->set_depth_shader_resource_view(deferred_depth_view_);
+            p->set_depth_shader_resource_view(deferred_depth_view_, deferred_gbuffers_view_[1]);
             p->draw();
         }
     }
