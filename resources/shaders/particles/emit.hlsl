@@ -1,4 +1,4 @@
-#include "globals.h"
+#include "global.h"
 
 // The particle buffers to fill with new particles
 RWStructuredBuffer<Particle> particle_pool : register(u0);
@@ -40,8 +40,8 @@ void CSMain( uint3 id : SV_DispatchThreadID )
         p.distance_to_camera_sqr = -1;
         p.mass = mass;
         p.mass_delta = 0.f;
-        p.velocity = velocity.xyz;
-            // + float3(sin(global_time * id.x), sin(global_time * 0.5 * id.x), sin(global_time * 2.0 * id.x))
+        p.velocity = velocity.xyz
+            + normalize(float3(sin(global_time * (id.x * 0.83 + 3)), sin(global_time * (0.34 * id.x + 5)), sin(global_time * (1.25 * id.x + 8))));
             // + abs(0.3 * float3(sin(global_time * 4 + id.x), sin(global_time * 5 + id.x), sin(global_time * 4.8 + id.x)));
         p.acceleration = (0).xxx;//float3(0, 9.81, 0) + 0.5 * normalize(-p.velocity);//float3(sin(global_time * id.x * 0.35 + 34), sin(global_time * id.x * 0.67 + 23), sin(global_time * id.x * 0.57 + 83)).xxx;
         p.age = particle_life_span + sin(id.x * global_time * 0.86);
@@ -56,6 +56,6 @@ void CSMain( uint3 id : SV_DispatchThreadID )
         uint index = dead_list.Consume();
 
         // Write the new particle state into the global particle buffer
-        particle_pool[ index ] = p;
+        particle_pool[index] = p;
     }
 }

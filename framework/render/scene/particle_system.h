@@ -71,9 +71,9 @@ private:
     ID3D11ShaderResourceView* particle_pool_SRV_{ nullptr };
     ID3D11UnorderedAccessView* particle_pool_UAV_{ nullptr };
 
-    ID3D11Buffer* view_space_particle_positions_{ nullptr }; // cached particle positions in view space
-    ID3D11ShaderResourceView* view_space_particle_positions_SRV_{ nullptr };
-    ID3D11UnorderedAccessView* view_space_particle_positions_UAV_{ nullptr };
+    // ID3D11Buffer* view_space_particle_positions_{ nullptr }; // cached particle positions in view space
+    // ID3D11ShaderResourceView* view_space_particle_positions_SRV_{ nullptr };
+    // ID3D11UnorderedAccessView* view_space_particle_positions_UAV_{ nullptr };
 
     ID3D11Buffer* dead_list_{ nullptr }; // dead particles indices
     ID3D11UnorderedAccessView* dead_list_UAV_{ nullptr };
@@ -109,7 +109,8 @@ private:
     ID3D11Buffer* emitter_const_buffer_{ nullptr };
 
     ID3D11BlendState* blend_state_{ nullptr };
-
+    ID3D11DepthStencilState* depth_state_on_{ nullptr };
+    ID3D11DepthStencilState* depth_state_off_{ nullptr };
     ID3D11RasterizerState* rasterizer_state_{ nullptr };
 
     // compute shaders
@@ -127,7 +128,7 @@ private:
     void simulate();
     void sort();
 
-    //debug
+#ifndef NDEBUG
     ID3D11Buffer* debug_counter_buffer_{ nullptr };
     int read_counter(ID3D11UnorderedAccessView* uav);
 
@@ -135,10 +136,13 @@ private:
     uint32_t dead_particles_after_emit_{ 0 };
     uint32_t dead_particles_after_simulation_{ 0 };
     uint32_t sort_particles_after_simulation_{ 0 };
+#endif
 
     // external textures
     ID3D11ShaderResourceView* depth_view_{ nullptr };
     ID3D11ShaderResourceView* normal_view_{ nullptr };
+    bool use_depth_for_collisions_{ 0 };
+    bool use_depth_test_{ 0 };
 
 public:
     ParticleSystem(uint32_t max_particles, Vector3 origin);

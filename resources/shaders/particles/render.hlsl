@@ -1,4 +1,4 @@
-#include "globals.h"
+#include "global.h"
 
 struct VS_OUTPUT
 {
@@ -23,11 +23,8 @@ struct PS_INPUT
 // The particle buffer data. Note this is only one half of the particle data - the data that is relevant to rendering as opposed to simulation
 StructuredBuffer<Particle> particle_pool : register(t0);
 
-// A buffer containing the pre-computed view space positions of the particles
-// StructuredBuffer<float4> view_space_positions : register(t1);
-
 // The sorted index list of particles
-StructuredBuffer<float2> sorted_index_buffer : register(t2);
+StructuredBuffer<float2> sorted_index_buffer : register(t1);
 
 // The geometry shader path for rendering particles.
 // Vertex shader only path
@@ -43,45 +40,27 @@ PS_INPUT VSMain( uint VertexId : SV_VertexID )
 
     float xOffset = 0;
     
-    const float2 offsets[ 4 ] =
+    const float2 offsets[4] =
     {
-        float2( -1,  1 ),
-        float2(  1,  1 ),
-        float2( -1, -1 ),
-        float2(  1, -1 ),
+        float2(-1, 1),
+        float2(1, 1),
+        float2(-1, -1),
+        float2(1, -1),
     };
 
-    uint index = (uint)sorted_index_buffer[ active_particles - particleIndex - 1 ].y;
-    // uint index = (uint)sorted_index_buffer[particleIndex].y;
+    uint index = (uint)sorted_index_buffer[active_particles - particleIndex - 1].y;
     Particle p = particle_pool[index];
 
     float2 offset = offsets[cornerIndex];
     float2 uv = (offset + 1) * float2(0.5, 0.5);
 
-    // float radius = ViewSpaceCentreAndRadius.w;
-    // float3 cameraFacingPos;
-
-    {
-        //float s, c;
-        //sincos( p.m_Rotation, s, c );
-        //float2x2 rotation = { float2( c, -s ), float2( s, c ) };
-        
-        //offset = mul( offset, rotation );
-
-        // cameraFacingPos = ViewSpaceCentreAndRadius.xyz;
-        // cameraFacingPos.xy += radius * offset;
-    }
-
-    // Output.Position = mul(float4(cameraFacingPos, 1), proj);
-    Output.ViewSpaceCentreAndRadius.xyz = mul(view, float4(p.position, 1)).xyz; // ViewSpaceCentreAndRadius;
-    Output.ViewSpaceCentreAndRadius.w = ((p.age / p.life_span) * (p.start_size - p.end_size) + p.start_size);
+    Output.ViewSpaceCentreAndRadius.xyz = mul(view, float4(p.position, 1)).xyz;
+    Output.ViewSpaceCentreAndRadius.w = (p.age / p.life_span) * ((p.end_size - p.start_size) + p.end_size);
     Output.ViewPos = Output.ViewSpaceCentreAndRadius.xyz + float3((uv * 2 - 1) * Output.ViewSpaceCentreAndRadius.w, 0.f);
     Output.Position = mul(proj, float4(Output.ViewPos, 1.f));
 
     Output.TexCoord = uv;
     Output.Color = p.color;
-    //Output.VelocityXYEmitterNdotL = (0).xxx; // VelocityXYEmitterNdotL;
-    // Output.ViewPos = cameraFacingPos;
 
     return Output;
 }
@@ -90,46 +69,36 @@ PS_INPUT VSMain( uint VertexId : SV_VertexID )
 // Texture2D particle_texture : register(t0);
 
 // The opaque scene depth buffer read as a texture
-Texture2D<float> depth_texture : register(t1);
-
+// Texture2D<float> depth_texture : register(t1);
 
 // Ratserization path's pixel shader
 float4 PSMain(PS_INPUT In) : SV_TARGET
 {
-    // return float4(1.f, 1.f, 1.f, 1.f);
-
     // Retrieve the particle data
     float3 particleViewSpacePos = In.ViewSpaceCentreAndRadius.xyz;
-    float  particleRadius = In.ViewSpaceCentreAndRadius.w;
+    float particleRadius = In.ViewSpaceCentreAndRadius.w;
 
     // Get the depth at this point in screen space
     // float depth = g_DepthTexture.Load( uint3( In.Position.x, In.Position.y, 0 ) ).x;
-    float depth = 0.5f;
+    // float depth = 0.5f;
 
     // Get viewspace position by generating a point in screen space at the depth of the depth buffer
     float4 viewSpacePos;
     viewSpacePos.x = In.Position.x / screen_width;
     viewSpacePos.y = 1 - (In.Position.y / screen_height);
     viewSpacePos.xy = (2 * viewSpacePos.xy) - 1;
-    viewSpacePos.z = depth;
+    viewSpacePos.z = In.Position.z;
     viewSpacePos.w = 1;
 
     // ...then transform it into view space using the inverse projection matrix and a divide by W
     viewSpacePos = mul(viewSpacePos, proj);
     viewSpacePos.xyz /= viewSpacePos.w;
 
-    // remove this?
-    // if (particleViewSpacePos.z > viewSpacePos.z)
-    // {
-    //     clip( -1 );
-    // }
-    //~
-    
     // Calculate the depth fade factor
-    // float depthFade = saturate((viewSpacePos.z - particleViewSpacePos.z) / particleRadius);
+    float depthFade = saturate((viewSpacePos.z - particleViewSpacePos.z) / particleRadius);
 
     float4 albedo = (1).xxxx;
-    // albedo.a = depthFade;
+    albedo.a = depthFade;
 
     // Read the texture atlas
     // albedo *= g_ParticleTexture.SampleLevel( g_samClampLinear, In.TexCoord, 0 ); // 2d
@@ -161,14 +130,8 @@ float4 PSMain(PS_INPUT In) : SV_TARGET
     n.z = sin( pi * length( uv ) );
     n = normalize(n);
 
-    // float3 sun_direction = normalize(float3(1, -1, 1));
-    float ndotl = 1.f;//saturate(dot(-sun_direction, n));
-
-    // Fetch the emitter's lighting term
-    // float emitterNdotL = In.VelocityXYEmitterNdotL.z;
-
-    // Mix the particle lighting term with the emitter lighting
-    // ndotl = lerp( ndotl, emitterNdotL, 0.5 );
+    float3 sun_direction = normalize(float3(1, -1, 1));
+    float ndotl = saturate(dot(sun_direction, n));
 
     // Ambient lighting plus directional lighting
     float3 lighting = (ndotl).xxx; //g_AmbientColor + ndotl * g_SunColor;

@@ -16,5 +16,5 @@ float4 PSMain( float4 pos : SV_POSITION ) : SV_Target
     // if (depth_tex.Load(int3(pos.xy, 0)).x == 1) {
     //     return float4(.3f, .5f, .7f, 1.f); // sky color
     // }
-    return pow(texture_to_present.Load(int3(pos.xy, 0)), 1/2.2f);
+    return pow(abs(texture_to_present.Load(int3(pos.xy, 0))), 1/2.2f);
 }

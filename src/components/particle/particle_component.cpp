@@ -21,7 +21,7 @@ void ParticleComponent::initialize()
     lights_.push_back(new AmbientLight(Vector3(0.05f, 0.05f, 0.05f)));
     lights_.push_back(new DirectionLight(Vector3(1.f, 1.f, 0.8f), Vector3(1.f, -1.f, 1.f)));
     lights_.push_back(new PointLight(Vector3(1.f, 1.f, 1.f), Vector3(0.f, 5.f, 0.f), 10));
-    particle_system_ = new ParticleSystem(400 * 1024, Vector3(0, 10, 0));
+    particle_system_ = new ParticleSystem(400 * 1024, Vector3(0, 2, 0));
 
     for (auto& l : lights_) {
         scene.add_light(l);

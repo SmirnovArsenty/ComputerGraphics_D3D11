@@ -51,11 +51,11 @@ void ParticleSystem::initialize()
     uav_desc.Buffer.Flags = 0;
     D3D11_CHECK(device->CreateUnorderedAccessView(particle_pool_, &uav_desc, &particle_pool_UAV_));
 
-    buffer_desc.ByteWidth = 16 * max_particles_count_;
-    buffer_desc.StructureByteStride = 16;
-    D3D11_CHECK(device->CreateBuffer(&buffer_desc, 0, &view_space_particle_positions_));
-    D3D11_CHECK(device->CreateShaderResourceView(view_space_particle_positions_, &srv_desc, &view_space_particle_positions_SRV_));
-    D3D11_CHECK(device->CreateUnorderedAccessView(view_space_particle_positions_, &uav_desc, &view_space_particle_positions_UAV_));
+    // buffer_desc.ByteWidth = 16 * max_particles_count_;
+    // buffer_desc.StructureByteStride = 16;
+    // D3D11_CHECK(device->CreateBuffer(&buffer_desc, 0, &view_space_particle_positions_));
+    // D3D11_CHECK(device->CreateShaderResourceView(view_space_particle_positions_, &srv_desc, &view_space_particle_positions_SRV_));
+    // D3D11_CHECK(device->CreateUnorderedAccessView(view_space_particle_positions_, &uav_desc, &view_space_particle_positions_UAV_));
 
     buffer_desc.StructureByteStride = sizeof(uint32_t);
     buffer_desc.ByteWidth = sizeof(uint32_t) * max_particles_count_;
@@ -118,12 +118,14 @@ void ParticleSystem::initialize()
     D3D11_CHECK(device->CreateBuffer(&buffer_desc, &data, &index_buffer_));
     delete[] data.pSysMem;
 
+#ifndef NDEBUG
     ZeroMemory(&buffer_desc, sizeof(buffer_desc));
     buffer_desc.Usage = D3D11_USAGE_STAGING;
     buffer_desc.BindFlags = 0;
     buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
     buffer_desc.ByteWidth = sizeof(UINT);
     D3D11_CHECK(device->CreateBuffer(&buffer_desc, nullptr, &debug_counter_buffer_));
+#endif
 
     ZeroMemory(&buffer_desc, sizeof(buffer_desc));
     buffer_desc.Usage = D3D11_USAGE_DEFAULT;
@@ -154,6 +156,14 @@ void ParticleSystem::initialize()
     blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
     D3D11_CHECK(device->CreateBlendState(&blend_desc, &blend_state_));
 
+    CD3D11_DEPTH_STENCIL_DESC depth_desc{};
+    depth_desc.DepthEnable = true;
+    depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+    depth_desc.DepthFunc = D3D11_COMPARISON_LESS;
+    device->CreateDepthStencilState(&depth_desc, &depth_state_on_);
+    depth_desc.DepthEnable = false;
+    device->CreateDepthStencilState(&depth_desc, &depth_state_off_);
+
     CD3D11_RASTERIZER_DESC rasterizer_desc{};
     rasterizer_desc.FillMode = D3D11_FILL_SOLID;
     rasterizer_desc.CullMode = D3D11_CULL_NONE;
@@ -173,13 +183,13 @@ void ParticleSystem::initialize()
 
     // emitter_data_.origin = Vector3(0, 0, 0);
     emitter_data_.velocity = Vector3(0, 0, 0);
-    emitter_data_.particle_life_span = 30;
-    emitter_data_.start_size = 0.3f;
-    emitter_data_.end_size = 0.01f;
+    emitter_data_.particle_life_span = 10;
+    emitter_data_.start_size = 0.03f;
+    emitter_data_.end_size = 0.f;
     emitter_data_.mass = 1.f;
     emitter_data_.start_color = Vector4(1.0f, 0.2f, 0.2f, 1.f);
     emitter_data_.end_color = Vector4(0.0f, 0.0f, 0.0f, 0.f);
-    emitter_data_.max_particles_this_frame = 100;
+    emitter_data_.max_particles_this_frame = 10;
 }
 
 void ParticleSystem::draw()
@@ -193,6 +203,7 @@ void ParticleSystem::draw()
 
     uniform_buffer_.bind(0);
 
+    context->OMSetDepthStencilState(use_depth_test_ ? depth_state_on_ : depth_state_off_, 0x0);
     context->RSSetState(rasterizer_state_);
     context->OMSetBlendState(blend_state_, nullptr, 0xFFFFFFFF);
 
@@ -217,15 +228,17 @@ void ParticleSystem::draw()
 
     context->CopyStructureCount(sort_list_const_buffer_, 0, sort_list_UAV_);
 
+#ifndef NDEBUG
     dead_particles_after_simulation_ = read_counter(dead_list_UAV_);
     sort_particles_after_simulation_ = read_counter(sort_list_UAV_);
     assert(sort_particles_after_simulation_ <= dead_particles_on_init_);
+#endif
 
     sort();
 
     render_.use();
-    ID3D11ShaderResourceView* vs_srv[] = { particle_pool_SRV_, view_space_particle_positions_SRV_, sort_list_SRV_ };
-    // ID3D11ShaderResourceView* ps_srv[] = { depthSRV };
+    ID3D11ShaderResourceView* vs_srv[] = { particle_pool_SRV_, sort_list_SRV_ };
+    //ID3D11ShaderResourceView* ps_srv[] = { depth_view_ };
     ID3D11Buffer* vb = nullptr;
     UINT stride = 0;
     UINT offset = 0;
@@ -235,7 +248,7 @@ void ParticleSystem::draw()
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     context->VSSetShaderResources(0, ARRAYSIZE(vs_srv), vs_srv);
-    // context->PSSetShaderResources(1, ARRAYSIZE(ps_srv), ps_srv);
+    //context->PSSetShaderResources(1, ARRAYSIZE(ps_srv), ps_srv);
 
     // Set the render target up since it was unbound earlier
     context->OMSetRenderTargets(1, &rtv, dsv);
@@ -243,12 +256,13 @@ void ParticleSystem::draw()
     SAFE_RELEASE(dsv);
 
     render_.use();
+
     context->DrawIndexedInstancedIndirect(indirect_args_, 0);
 
     ZeroMemory(vs_srv, sizeof(vs_srv));
     context->VSSetShaderResources(0, ARRAYSIZE(vs_srv), vs_srv);
-    // ZeroMemory(ps_srv, sizeof(ps_srv));
-    // context->PSSetShaderResources(1, ARRAYSIZE(ps_srv), ps_srv);
+    //ZeroMemory(ps_srv, sizeof(ps_srv));
+    //context->PSSetShaderResources(1, ARRAYSIZE(ps_srv), ps_srv);
 }
 
 void ParticleSystem::imgui()
@@ -259,9 +273,10 @@ void ParticleSystem::imgui()
         ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse;
 
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(400, 100), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(400, 150), ImGuiCond_FirstUseEver);
     ImGui::Begin("Particle system info", nullptr, window_flags);
     {
+#ifndef NDEBUG
         ImGui::Text("dead count on init");
         ImGui::SameLine();
         ImGui::Text("%d", dead_particles_on_init_);
@@ -277,28 +292,27 @@ void ParticleSystem::imgui()
         ImGui::Text("sort count after simulation");
         ImGui::SameLine();
         ImGui::Text("%d", sort_particles_after_simulation_);
+#endif
+
+        ImGui::Checkbox("collisions", &use_depth_for_collisions_);
+
+        ImGui::Checkbox("depth test", &use_depth_test_);
     }
     ImGui::End();
 
     ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkSize.x - 400, 0), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(400, 120), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(400, 150), ImGuiCond_FirstUseEver);
     ImGui::Begin("Emitter info", nullptr, window_flags);
     {
-        ImGui::Text("particles to emit per frame");
-        ImGui::SameLine();
-        ImGui::SliderInt("#", &emitter_data_.max_particles_this_frame, 1, max_particles_count_);
+        ImGui::SliderInt("particles to emit per frame", &emitter_data_.max_particles_this_frame, 1, 100);
 
-        ImGui::Text("Particle velocity");
-        ImGui::SameLine();
-        ImGui::SliderFloat3("####", &emitter_data_.velocity.x, -10.f, 10.f);
+        ImGui::SliderFloat3("particle emit velocity", &emitter_data_.velocity.x, -10.f, 10.f);
 
-        ImGui::Text("particle lifespan");
-        ImGui::SameLine();
-        ImGui::SliderFloat("sec", &emitter_data_.particle_life_span, 0, 60);
+        ImGui::SliderFloat("particle lifespan", &emitter_data_.particle_life_span, 0, 60);
 
-        ImGui::Text("particle mass");
-        ImGui::SameLine();
-        ImGui::SliderFloat("kg", &emitter_data_.mass, -100, 100);
+        ImGui::SliderFloat("particle mass", &emitter_data_.mass, 0.f, 10.f);
+
+        ImGui::SliderFloat("particle start size", &emitter_data_.start_size, 0.01f, 0.1f, "%.2f");
     }
     ImGui::End();
 }
@@ -331,9 +345,9 @@ void ParticleSystem::destroy_resources()
     SAFE_RELEASE(particle_pool_UAV_);
     SAFE_RELEASE(particle_pool_);
 
-    SAFE_RELEASE(view_space_particle_positions_SRV_);
-    SAFE_RELEASE(view_space_particle_positions_UAV_);
-    SAFE_RELEASE(view_space_particle_positions_);
+    // SAFE_RELEASE(view_space_particle_positions_SRV_);
+    // SAFE_RELEASE(view_space_particle_positions_UAV_);
+    // SAFE_RELEASE(view_space_particle_positions_);
 
     SAFE_RELEASE(dead_list_UAV_);
     SAFE_RELEASE(dead_list_);
@@ -347,11 +361,15 @@ void ParticleSystem::destroy_resources()
     SAFE_RELEASE(indirect_args_UAV_);
     SAFE_RELEASE(indirect_args_);
 
+#ifndef NDEBUG
     SAFE_RELEASE(debug_counter_buffer_);
+#endif
     SAFE_RELEASE(dead_list_const_buffer_);
     SAFE_RELEASE(sort_list_const_buffer_);
     SAFE_RELEASE(emitter_const_buffer_);
     SAFE_RELEASE(blend_state_);
+    SAFE_RELEASE(depth_state_on_);
+    SAFE_RELEASE(depth_state_off_);
     SAFE_RELEASE(rasterizer_state_);
 
     init_dead_list_.destroy();
@@ -381,7 +399,9 @@ void ParticleSystem::init_dead_list()
 
     context->Dispatch(align(max_particles_count_, 256) / 256, 1, 1);
 
+#ifndef NDEBUG
     dead_particles_on_init_ = read_counter(dead_list_UAV_);
+#endif
 }
 
 void ParticleSystem::emit()
@@ -406,7 +426,9 @@ void ParticleSystem::emit()
 
     context->Dispatch(align(emitter_data_.max_particles_this_frame, 1024) / 1024, 1, 1);
 
+#ifndef NDEBUG
     dead_particles_after_emit_ = read_counter(dead_list_UAV_);
+#endif
 }
 
 void ParticleSystem::simulate()
@@ -416,18 +438,22 @@ void ParticleSystem::simulate()
 
     uniform_buffer_.bind(0);
 
-    ID3D11UnorderedAccessView* uavs[] = { particle_pool_UAV_, dead_list_UAV_, sort_list_UAV_, view_space_particle_positions_UAV_, indirect_args_UAV_ };
+    ID3D11UnorderedAccessView* uavs[] = { particle_pool_UAV_, dead_list_UAV_, sort_list_UAV_, indirect_args_UAV_ };
     UINT initialCounts[] = { (UINT)-1, (UINT)-1, (UINT)0, (UINT)-1, (UINT)-1, (UINT)-1 };
     context->CSSetUnorderedAccessViews(0, ARRAYSIZE(uavs), uavs, initialCounts);
 
     ID3D11ShaderResourceView* srvs[] = { depth_view_, normal_view_ };
-    context->CSSetShaderResources(0, ARRAYSIZE(srvs), srvs);
+    if (use_depth_for_collisions_) {
+        context->CSSetShaderResources(0, ARRAYSIZE(srvs), srvs);
+    }
 
     simulate_.use();
     context->Dispatch(align(max_particles_count_, 256) / 256, 1, 1);
 
-    ZeroMemory(srvs, sizeof(srvs));
-    context->CSSetShaderResources(0, ARRAYSIZE(srvs), srvs);
+    if (use_depth_for_collisions_) {
+        ZeroMemory(srvs, sizeof(srvs));
+        context->CSSetShaderResources(0, ARRAYSIZE(srvs), srvs);
+    }
 
     ZeroMemory(uavs, sizeof(uavs));
     context->CSSetUnorderedAccessViews(0, ARRAYSIZE(uavs), uavs, nullptr);
@@ -441,6 +467,7 @@ void ParticleSystem::sort()
     sort_lib_.run(max_particles_count_, sort_list_UAV_, sort_list_const_buffer_);
 }
 
+#ifndef NDEBUG
 int ParticleSystem::read_counter(ID3D11UnorderedAccessView* uav)
 {
     auto context = Game::inst()->render().context();
@@ -460,3 +487,4 @@ int ParticleSystem::read_counter(ID3D11UnorderedAccessView* uav)
 
     return count;
 }
+#endif
