@@ -55,3 +55,28 @@ target_link_libraries(particle
 set_property(TARGET particle PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 add_custom_command(TARGET particle POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:particle> ${CMAKE_CURRENT_SOURCE_DIR})
+
+### setup master build
+set(group_component_master
+    src/components/master/component.cpp
+    src/components/master/component.h
+)
+set(group_component_master_main
+    src/main.cpp
+)
+set(master_sources
+    ${group_component_master}
+    ${group_component_master_main}
+)
+source_group("" FILES ${group_component_master_main})
+source_group("component" FILES ${group_component_master})
+add_executable(master WIN32 ${master_sources})
+target_include_directories(master
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/framework)
+target_link_libraries(master
+    framework
+)
+set_property(TARGET master PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+add_custom_command(TARGET master POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:master> ${CMAKE_CURRENT_SOURCE_DIR})
